@@ -43,7 +43,7 @@ class Config(object):
 
 class ProdConfig(Config):
     MONGODB_SETTINGS = {
-        'host': 'mongodb://10.178.0.13:7361/blanc-prod'  # internal
+        'host': 'mongodb://10.178.0.5:7361/blanc-prod'  # internal
     }
     TESTMODE_YN = "N"
 
