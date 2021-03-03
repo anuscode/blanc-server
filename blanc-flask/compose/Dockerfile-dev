@@ -1,0 +1,15 @@
+FROM tiangolo/uwsgi-nginx-flask:python3.6-alpine3.7
+
+RUN mkdir -p /blanc
+
+COPY .. /blanc
+
+WORKDIR /blanc
+
+RUN pip3 install -r requirements.txt
+
+EXPOSE 5000
+
+CMD chmod +x ./entrypoint.sh
+
+ENTRYPOINT ["sh", "entrypoint.sh"]
