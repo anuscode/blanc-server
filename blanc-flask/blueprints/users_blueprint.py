@@ -275,8 +275,8 @@ def route_upload_user_image(user_id: str, index: int):
         raise ValueError("The file is not an image type.")
 
     bucket = storage.bucket()
-    file_name_to_save = "{0}_{1}_{2}".format(uid, index, uuid.uuid1())
-    blob = bucket.blob("{0}/{1}/{2}".format(USER_IMAGE_FOLDER, uid, file_name_to_save))
+    file_name_to_save = "{0}_{1}_{2}".format(user.uid, index, uuid.uuid1())
+    blob = bucket.blob("{0}/{1}/{2}".format(USER_IMAGE_FOLDER, user.uid, file_name_to_save))
     blob.upload_from_file(image_file)
 
     user_images_temp = user.user_images_temp
