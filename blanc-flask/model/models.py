@@ -48,6 +48,13 @@ def _get_index_at(cursor, index):
         return None
 
 
+class Status(object):
+    OPENED = "OPENED"
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
+
 # DEPRECATED: Do not use it.
 class FreeToken(db.EmbeddedDocument):
     available_after = db.LongField(required=True, default=0)
@@ -370,15 +377,11 @@ class User(db.Document):
                                   min_diameter=0, max_diameter=30,
                                   star_rating_avg=3.5):
         """Generates recommended users. If not found, recursively try it increasing diameter up to 300 km."""
-        sex = 'M' if self.sex == 'F' else 'F'
+        sex = next((s for s in ['M', 'F'] if s != self.sex))
+        result = result or []
+        nin_ids = nin_ids or self._get_nin_ids()
 
-        if result is None:
-            result = list()
-
-        if not isinstance(nin_ids, set):
-            nin_ids = self._get_nin_ids()
-
-        location = self.location["coordinates"] if self.location else [127.0936859, 37.505808]
+        location = self.location["coordinates"] if self.location else [127.0977517240413, 37.49880740259655]
         params = dict(
             location__near=location,
             location__min_distance=min_diameter * 1000,
