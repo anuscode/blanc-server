@@ -20,6 +20,7 @@ from firebase_admin import storage
 from firebase_admin import auth
 from firebase_admin._auth_utils import UserNotFoundError
 from model.models import Alarm, User, UserImage, Request, StarRating, Setting
+from model.models import Status
 from shared import regex
 from shared import message_service
 from shared.annotation import id_token_required
@@ -34,11 +35,6 @@ IMAGE_MIMETYPE_REGEX = r"image/.*"
 USER_IMAGE_FOLDER = "user_images"
 
 KAKAO_AUTH_URL = "https://kapi.kakao.com/v2/user/me"
-
-OPENED = "OPENED"
-PENDING = "PENDING"
-APPROVED = "APPROVED"
-REJECTED = "REJECTED"
 
 http = urllib3.PoolManager()
 
@@ -289,7 +285,7 @@ def route_upload_user_image(user_id: str, index: int):
     else:  # update existing one
         current_image_at_index.url = blob.public_url
         user.user_images_temp = sorted(user_images_temp, key=lambda x: x.index)
-    user.status = OPENED
+    user.status = Status.OPENED
     user.save()
 
     updated_image = next(
@@ -305,7 +301,7 @@ def route_update_user_status_to_approved(user_id: str):
     user = User.objects.get_or_404(id=user_id)
 
     user.user_images = user.user_images_temp
-    user.status = APPROVED
+    user.status = Status.APPROVED
     user.available = True
     user.save()
 
@@ -321,7 +317,7 @@ def route_update_user_status_to_rejected(user_id: str):
     user = User.objects.get_or_404(id=user_id)
 
     user.user_images = user.user_images_temp
-    user.status = REJECTED
+    user.status = Status.REJECTED
     user.save()
 
     response = encode(user.to_mongo())
@@ -333,7 +329,7 @@ def route_update_user_status_pending(user_id: str):
     user = User.objects.get_or_404(id=user_id)
     user.identify(request)
 
-    user.status = PENDING
+    user.status = Status.PENDING
     user.save()
 
     response = encode(user.to_mongo())
@@ -345,7 +341,7 @@ def route_delete_user_image(user_id: str, index: int):
     user = User.objects.get_or_404(id=user_id)
     user.identify(request)
 
-    if user.available and user.status == APPROVED:
+    if user.available and user.status == Status.APPROVED:
         is_same = compare_user_images_and_temps(
             user.user_images, user.user_images_temp
         )
@@ -365,7 +361,7 @@ def route_delete_user_image(user_id: str, index: int):
          if user_image_temp.index == index), None)
 
     user.update(pull__user_images_temp=user_image_to_remove)
-    user.status = OPENED
+    user.status = Status.OPENED
     user.save()
     user.reload()
 
@@ -611,6 +607,22 @@ def route_update_push_setting(user_id: str):
     return Response("", mimetype="application/json")
 
 
+@users_blueprint.route("/users/<user_id>/unregister", methods=["DELETE"])
+def route_delete_user(user_id: str):
+    user = User.objects.get_or_404(id=user_id)
+    user.identify(request)
+
+    if user.available:
+        abort(500)
+
+    if user.status != Status.PENDING:
+        abort(500)
+
+    user.delete()
+
+    return Response("", mimetype="application/json")
+
+
 def _get_hash(user_id: str):
     today = str(pendulum.yesterday().date())
     hash_today = int(
@@ -624,7 +636,7 @@ def _get_hash(user_id: str):
 
 def _create_user(uid, phone):
     user = User(
-        uid=uid, phone=phone, status=OPENED, available=False,
+        uid=uid, phone=phone, status=Status.OPENED, available=False,
         last_login_at=pendulum.now().int_timestamp).save()
     Alarm(owner=user, records=[]).save()
     return user
