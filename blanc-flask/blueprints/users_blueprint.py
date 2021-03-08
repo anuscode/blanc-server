@@ -125,7 +125,9 @@ def route_update_user_location(user_id: str):
     user = User.objects.get_or_404(id=user_id)
     user.identify(request)
 
-    longitude, latitude = request.args.get("longitude", None), request.args.get("latitude", None)
+    longitude = request.args.get("longitude", None)
+    latitude = request.args.get("latitude", None)
+
     area = request.args.get("area", None)
 
     if not longitude or not latitude:
@@ -199,26 +201,45 @@ def route_get_session():
     """Endpoint for getting user session."""
     uid = request.headers.get("uid", None)
     user = User.objects.get_or_404(uid=uid)
+    user_id = user.id
 
     point = user.get_current_amount_of_point()
-
     user = user.to_mongo()
 
-    star_rating = StarRating.objects(user_from=user["_id"]).as_pymongo()
-    received = Request.objects(user_to=user["_id"]).as_pymongo()
-    sent = Request.objects(user_from=user["_id"]).as_pymongo()
+    star_rating = StarRating.objects(user_from=user_id).as_pymongo()
+    received = Request.objects(user_to=user_id).as_pymongo()
+    sent = Request.objects(user_from=user_id).as_pymongo()
 
-    user_ids_matched = \
-        [str(req["user_to"]) for req in sent if req.get("response") == 1] + \
-        [str(req["user_from"]) for req in received if req.get("response") == 1]
-    user_ids_i_sent_request = \
-        [str(req["user_to"]) for req in sent if req.get("response") != 1]
-    user_ids_sent_me_request = \
-        [str(req["user_from"]) for req in received if req.get("response") != 1]
-    user_ids_i_rated = \
-        [dict(user_id=str(x["user_to"]), score=x["score"]) for x in star_rating]
+    # 이미 성사 된 상대
+    matched_request_sent = [
+        str(req["user_to"]) for req in sent if req.get("response") == 1
+    ]
+    matched_request_received = [
+        str(req["user_from"]) for req in received if req.get("response") == 1
+    ]
+    user_ids_matched = matched_request_received + matched_request_sent
+    # 성사 되지 않은 상대
+    unmatched_request_sent = [
+        str(req["user_to"]) for req in sent if req.get("response") == 0
+    ]
+    unmatched_request_received = [
+        str(req["user_from"]) for req in received if req.get("response") == 0
+    ]
+    user_ids_unmatched = unmatched_request_sent + unmatched_request_received
+    # 이미 좋아요를 보냄
+    user_ids_i_sent_request = [
+        str(req["user_to"]) for req in sent if req.get("response") != 1
+    ]
+    # 내게 좋아요를 보냄 and 미수락
+    user_ids_sent_me_request = [
+        str(req["user_from"]) for req in received if req.get("response") != 1
+    ]
+    user_ids_i_rated = [
+        dict(user_id=str(x["user_to"]), score=x["score"]) for x in star_rating
+    ]
 
     user["user_ids_matched"] = user_ids_matched
+    user["user_ids_unmatched"] = user_ids_unmatched
     user["user_ids_i_sent_request"] = user_ids_i_sent_request
     user["user_ids_sent_me_request"] = user_ids_sent_me_request
     user["star_ratings_i_rated"] = user_ids_i_rated
