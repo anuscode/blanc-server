@@ -211,38 +211,25 @@ def route_get_session():
     sent = Request.objects(user_from=user_id).as_pymongo()
 
     # 이미 성사 된 상대
-    matched_request_sent = [
-        str(req["user_to"]) for req in sent if req.get("response") == 1
-    ]
-    matched_request_received = [
-        str(req["user_from"]) for req in received if req.get("response") == 1
-    ]
+    matched_request_sent = [str(req["user_to"]) for req in sent if req.get("response") == 1]
+    matched_request_received = [str(req["user_from"]) for req in received if req.get("response") == 1]
     user_ids_matched = matched_request_received + matched_request_sent
     # 성사 되지 않은 상대
-    unmatched_request_sent = [
-        str(req["user_to"]) for req in sent if req.get("response") == 0
-    ]
-    unmatched_request_received = [
-        str(req["user_from"]) for req in received if req.get("response") == 0
-    ]
+    unmatched_request_sent = [str(req["user_to"]) for req in sent if req.get("response") == 0]
+    unmatched_request_received = [str(req["user_from"]) for req in received if req.get("response") == 0]
     user_ids_unmatched = unmatched_request_sent + unmatched_request_received
     # 이미 좋아요를 보냄
-    user_ids_i_sent_request = [
-        str(req["user_to"]) for req in sent if req.get("response") != 1
-    ]
+    user_ids_i_sent_request = [str(req["user_to"]) for req in sent if req.get("response") != 1]
     # 내게 좋아요를 보냄 and 미수락
-    user_ids_sent_me_request = [
-        str(req["user_from"]) for req in received if req.get("response") != 1
-    ]
-    user_ids_i_rated = [
-        dict(user_id=str(x["user_to"]), score=x["score"]) for x in star_rating
-    ]
+    user_ids_sent_me_request = [str(req["user_from"]) for req in received if req.get("response") != 1]
+    # 내가 평가 한 사람들
+    star_ratings_i_rated = [dict(user_id=str(x["user_to"]), score=x["score"]) for x in star_rating]
 
     user["user_ids_matched"] = user_ids_matched
     user["user_ids_unmatched"] = user_ids_unmatched
     user["user_ids_i_sent_request"] = user_ids_i_sent_request
     user["user_ids_sent_me_request"] = user_ids_sent_me_request
-    user["star_ratings_i_rated"] = user_ids_i_rated
+    user["star_ratings_i_rated"] = star_ratings_i_rated
     user["point"] = point
 
     response = encode(user)
