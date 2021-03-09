@@ -619,6 +619,7 @@ class Post(db.Document):
         'indexes': ['author']
     }
     author = db.ReferenceField(User, required=True, reverse_delete_rule=db.CASCADE)
+    author_sex = db.StringField(choices=["M", "F"])
     title = db.StringField()
     description = db.StringField()
     url = db.StringField()
@@ -633,6 +634,7 @@ class Post(db.Document):
     def create(cls, author=None, title=None, description=None, resources=None, created_at=None, enable_comment=None):
         post = Post(
             author=author,
+            author_sex=author.sex,
             title=title,
             description=description,
             resources=resources,
@@ -732,7 +734,7 @@ class Request(db.Document):
     responded_at = db.LongField()
 
     @classmethod
-    def get_request(cls, **kwargs):
+    def get(cls, **kwargs):
         _request = Request.objects.get_or_404(**kwargs).to_mongo()
         _request["user_to"] = User.get(id=_request["user_to"]).to_mongo()
         _request["user_from"] = User.get(id=_request["user_from"]).to_mongo()

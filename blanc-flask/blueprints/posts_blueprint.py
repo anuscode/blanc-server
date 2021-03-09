@@ -63,10 +63,17 @@ def route_create_post():
 @posts_blueprint.route('/posts', methods=['GET'])
 @time_lapse
 def route_list_posts():
+    uid = request.headers.get("uid", None)
+    user = User.get(uid=uid)
+    opposite_sex = "M" if user.sex == "F" else "F"
+
     last_id: str = request.args.get("last_id", None)
     per_page: int = int(request.args.get("per_page", 30))
 
-    params = dict(id__lt=last_id) if last_id else dict()
+    params = dict(author_sex=opposite_sex)
+    if last_id:
+        params["id__lt"] = last_id
+
     result = Post.list_posts(**params, limit=per_page)
 
     response = encode(list(result))
@@ -84,7 +91,6 @@ def route_get_post(post_id):
 def delete_post(post_id):
     post = Post.objects.get_or_404(id=post_id)
     post.delete()
-
     response = json.dumps(dict(_id=str(post.id)))
     return Response(response, mimetype="application/json")
 
