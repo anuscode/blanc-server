@@ -16,7 +16,7 @@ requests_blueprint = Blueprint("requests_blueprint", __name__)
 
 @requests_blueprint.route("/requests", methods=["GET"])
 @time_lapse
-def route_list_requests_to_me():
+def route_list_requests():
     """Endpoint for like request list."""
     uid = request.headers.get("uid", None)
     user = User.objects.get_or_404(uid=uid)
@@ -27,11 +27,9 @@ def route_list_requests_to_me():
 
 @requests_blueprint.route("/requests/<request_id>", methods=["GET"])
 @time_lapse
-def route_get_request_to_me(request_id: str):
+def route_get_request(request_id: str):
     """Endpoint for like request list."""
-    uid = request.headers.get("uid", None)
-    user = User.objects(uid=uid).get_or_404()
-    _request = Request.get_request(user_to=user, id=request_id)
+    _request = Request.get(id=request_id)
     response = encode(_request)
     return Response(response, mimetype="application/json")
 
@@ -98,16 +96,14 @@ def route_create_request(user_id: str, r_type: int):
     data = alarm_record.as_dict()
     message_service.push(data, user_to.device_token)
 
-    response = encode(Request.get_request(id=_request.id))
+    response = encode(Request.get(id=_request.id))
     return Response(response, mimetype="application/json")
 
 
 @requests_blueprint.route("/requests/<request_id>/response/<int:result>", methods=["PUT"])
 @time_lapse
 def route_update_response_of_request(request_id: str, result: int):
-    """Updates a received like request.
-       ACCEPT: 1 DECLINE: 0
-    """
+    """Updates a received like request. ACCEPT: 1 DECLINE: 0 """
 
     uid = request.headers.get("uid", None)
     me = User.objects.get_or_404(uid=uid)
@@ -150,5 +146,5 @@ def route_update_response_of_request(request_id: str, result: int):
         data = alarm_record.as_dict()
         message_service.push(data, user_alarm_to.device_token)
 
-    response = encode(Request.get_request(id=_request.id))
+    response = encode(Request.get(id=_request.id))
     return Response(response, mimetype="application/json")
