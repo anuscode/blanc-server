@@ -7,6 +7,8 @@ apns = messaging.APNSConfig(headers={"apns-priority": "5", "apns_priority": "5"}
 
 
 def push(data: dict = None, token: str = None, priority="normal"):
+    if not token:
+        return
     try:
         message = messaging.Message(
             data=data,
