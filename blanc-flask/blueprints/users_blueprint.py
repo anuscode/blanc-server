@@ -1,6 +1,5 @@
 """User blue print definitions."""
 
-import hashlib
 import json
 import logging
 import pendulum
@@ -19,7 +18,7 @@ from firebase_admin import messaging
 from firebase_admin import storage
 from firebase_admin import auth
 from firebase_admin._auth_utils import UserNotFoundError
-from model.models import Alarm, User, UserImage, Request, StarRating, Setting
+from model.models import Alarm, User, UserImage, Request, StarRating, Setting, Post, Contact
 from model.models import Status
 from shared import regex
 from shared import message_service
@@ -55,9 +54,9 @@ def get_coordinates_by_ip(req):
 
     try:
         ip_address = req.remote_addr
-        response = http.request(
-            "GET", "http://api.ipstack.com/{ip_address}?access_key={access_key}".format(
-                ip_address=ip_address, access_key=access_key))
+        url = "http://api.ipstack.com/{ip_address}?access_key={access_key}".format(
+            ip_address=ip_address, access_key=access_key)
+        response = http.request("GET", url)
         value = json.loads(response.data.decode('utf8'))
         longitude, latitude = value.get("longitude"), value.get("latitude")
         return float(longitude), float(latitude)
@@ -86,7 +85,11 @@ def route_create_user():
     user = User.objects(uid=uid).first()
 
     if not user:
-        user = _create_user(uid, phone)
+        user = User(uid=uid, phone=phone, status=Status.OPENED, available=False,
+                    last_login_at=pendulum.now().int_timestamp)
+        user.save()
+        alarm = Alarm(owner=user, records=[])
+        alarm.save()
 
     response = encode(user.to_mongo())
     return Response(response, mimetype="application/json")
@@ -284,20 +287,17 @@ def route_upload_user_image(user_id: str, index: int):
     blob.upload_from_file(image_file)
 
     user_images_temp = user.user_images_temp
-    current_image_at_index = next(
-        (x for x in user_images_temp if x.index == index), None)
+    current_image_at_index = next((x for x in user_images_temp if x.index == index), None)
 
     if not current_image_at_index:  # create new one
-        user.user_images_temp.append(
-            UserImage(index=index, url=blob.public_url))
+        user.user_images_temp.append(UserImage(index=index, url=blob.public_url))
     else:  # update existing one
         current_image_at_index.url = blob.public_url
         user.user_images_temp = sorted(user_images_temp, key=lambda x: x.index)
     user.status = Status.OPENED
     user.save()
 
-    updated_image = next(
-        (x for x in user_images_temp if x.index == index), None)
+    updated_image = next((x for x in user_images_temp if x.index == index), None)
 
     response = encode(updated_image.to_mongo())
     return Response(response, mimetype="application/json")
@@ -355,9 +355,7 @@ def route_delete_user_image(user_id: str, index: int):
         )
         if is_same and len(user.user_images_temp) > 2:
             images = user.user_images
-            images_to_update = [
-                image for image in images if image.index != index
-            ]
+            images_to_update = [image for image in images if image.index != index]
             user.update(user_images=images_to_update)
             user.update(user_images_temp=images_to_update)
             user.reload()
@@ -615,39 +613,32 @@ def route_update_push_setting(user_id: str):
     return Response("", mimetype="application/json")
 
 
-@users_blueprint.route("/users/<user_id>/unregister", methods=["DELETE"])
-def route_delete_user(user_id: str):
+@users_blueprint.route("/users/<user_id>/cancel", methods=["DELETE"])
+@id_token_required
+def route_cancel_register_user(user_id: str):
     user = User.objects.get_or_404(id=user_id)
     user.identify(request)
 
     if user.available:
         abort(500)
-
     if user.status != Status.PENDING:
         abort(500)
+    if user.user_images:
+        abort(500)
 
+    Alarm.objects(owner=user).delete()
     user.delete()
 
     return Response("", mimetype="application/json")
 
 
-def _get_hash(user_id: str):
-    today = str(pendulum.yesterday().date())
-    hash_today = int(
-        hashlib.sha1(
-            today.encode("utf-8")).hexdigest(), 16) % 10 ** 8
-    user_own_hash = int(
-        hashlib.sha1(
-            user_id.encode("utf-8")).hexdigest(), 16) % 10 ** 8
-    return hash_today + user_own_hash
-
-
-def _create_user(uid, phone):
-    user = User(
-        uid=uid, phone=phone, status=Status.OPENED, available=False,
-        last_login_at=pendulum.now().int_timestamp).save()
-    Alarm(owner=user, records=[]).save()
-    return user
+@users_blueprint.route("/users/<user_id>/unregister", methods=["PUT"])
+@id_token_required
+def route_unregister_user(user_id: str):
+    user = User.objects.get_or_404(id=user_id)
+    user.identify(request)
+    user.unregister()
+    return Response("", mimetype="application/json")
 
 
 def compare_user_images_and_temps(images, images_temp):
