@@ -16,6 +16,16 @@ GLOBAL_PHONE_REGEX = regex.GLOBAL_PHONE_REGEX
 PHONE_PREFIX_REGEX = regex.PHONE_PREFIX_REGEX
 
 
+class STATUS(object):
+    SUCCEED_ISSUE = "SUCCEED_ISSUE"
+    FAILED_ISSUE = "FAILED_ISSUE"
+    INVALID_PHONE_NUMBER = "INVALID_PHONE_NUMBER"
+    DUPLICATE_PHONE_NUMBER = "DUPLICATE_PHONE_NUMBER"
+    INVALID_SMS_CODE = "INVALID_SMS_CODE"
+    EXPIRED_SMS_CODE = "EXPIRED_SMS_CODE"
+    VERIFIED_SMS_CODE = "VERIFIED_SMS_CODE"
+
+
 @verifications_blueprint.route('/verifications/sms', methods=['POST'])
 def route_issue_sms_code():
     phone = request.form.get('phone', None)
@@ -23,10 +33,12 @@ def route_issue_sms_code():
     phone = normalize_phone_number(phone)
     phone, match = validate_phone_regex(phone)
     if not match:
-        return Response(json.dumps(dict(issued=False, reason="유효하지 않은 전화번호 입니다.")), mimetype="application/json")
+        response = json.dumps(dict(status=STATUS.INVALID_PHONE_NUMBER))
+        return Response(response, mimetype="application/json")
 
     issue_result = issue(phone)
-    return Response(json.dumps(issue_result), mimetype="application/json")
+    response = json.dumps(issue_result)
+    return Response(response, mimetype="application/json")
 
 
 @verifications_blueprint.route('/verifications/sms', methods=['PUT'])
@@ -38,21 +50,22 @@ def route_verify_sms_code():
     sms_code_to_verify = hash_service.get_sms_code(phone, expired_at)
 
     if sms_code != sms_code_to_verify:
-        return Response(
-            json.dumps(dict(verified=False, reason="유효하지 않은 SMS_CODE 입니다.")), mimetype="application/json")
+        response = json.dumps(dict(status=STATUS.INVALID_SMS_CODE))
+        return Response(response, mimetype="application/json")
 
     if int(expired_at) < pendulum.now().int_timestamp:
-        return Response(
-            json.dumps(dict(verified=False, reason="SMS_CODE가 만료 되었습니다.")), mimetype="application/json")
+        response = json.dumps(dict(status=STATUS.EXPIRED_SMS_CODE))
+        return Response(response, mimetype="application/json")
 
     sms_token = hash_service.generate_sms_token(phone, sms_code)
-
-    return Response(
-        json.dumps(dict(verified=True,
-                        phone=phone,
-                        sms_code=sms_code,
-                        expired_at=int(expired_at),
-                        sms_token=sms_token)), mimetype="application/json")
+    response = json.dumps(dict(
+        phone=phone,
+        status=STATUS.VERIFIED_SMS_CODE,
+        sms_code=sms_code,
+        expired_at=int(expired_at),
+        sms_token=sms_token)
+    )
+    return Response(response, mimetype="application/json")
 
 
 def normalize_phone_number(phone):
@@ -69,12 +82,14 @@ def validate_phone_regex(phone):
 def issue(phone):
     expired_at = pendulum.now().int_timestamp + (60 * 10)
     sms_code = hash_service.get_sms_code(phone, expired_at)
-    response = sms_service.send(phone=phone, msg="[인증번호:{sms_code}] 핑미 회원가입 인증번호 입니다.".format(sms_code=sms_code))
-    success, error = response.get("success_cnt"), response.get("error_cnt")
-    issued = True if success == 1 and error == 0 else False
+    message = "[인증번호:{sms_code}] 핑미 회원가입 인증번호 입니다.".format(sms_code=sms_code)
+    response = sms_service.send(phone=phone, msg=message)
+    success = response.get("success_cnt")
+    error = response.get("error_cnt")
+    status = STATUS.SUCCEED_ISSUE if success == 1 and error == 0 else STATUS.FAILED_ISSUE
     return dict(
-        issued=issued,
+        status=status,
+        sms_code=sms_code,
         expired_at=expired_at,
-        phone=phone,
-        sms_code=sms_code
+        phone=phone
     )
