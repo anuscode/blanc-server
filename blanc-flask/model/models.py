@@ -53,28 +53,8 @@ class Status(object):
     PENDING = "PENDING"
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
-
-
-# DEPRECATED: Do not use it.
-class FreeToken(db.EmbeddedDocument):
-    available_after = db.LongField(required=True, default=0)
-    last_used_at = db.LongField(required=True, default=0)
-    signature = db.StringField(required=True, default=sha256("00"))
-
-    def is_available(self):
-        return pendulum.now().int_timestamp - self.available_after >= 0
-
-    def is_valid(self):
-        return self.signature == self.sha256()
-
-    def consume(self):
-        self.last_used_at = pendulum.now().int_timestamp
-        self.available_after = self.last_used_at + 12 * 60 * 60 * 60
-        self.signature = self.sha256()
-
-    def sha256(self):
-        return sha256("{0}{1}".format(
-            self.last_used_at, self.available_after))
+    BLOCKED = "BLOCKED"
+    UNREGISTERED = "UNREGISTERED"
 
 
 class UserImage(db.EmbeddedDocument):
@@ -128,7 +108,9 @@ class User(db.Document):
     interest_ids = db.ListField(db.IntField())
 
     available = db.BooleanField(default=False)
-    status = db.StringField(choices=["OPENED", "PENDING", "APPROVED", "REJECTED"])
+    status = db.StringField(choices=[
+        Status.OPENED, Status.PENDING, Status.APPROVED, Status.REJECTED, Status.BLOCKED, Status.UNREGISTERED
+    ])
     star_rating_avg = db.FloatField(default=0)
 
     free_pass_tokens = db.ListField(db.LongField(), default=[0, 0])
@@ -191,9 +173,7 @@ class User(db.Document):
         recommendation = Recommendation.objects(owner=self).first()
         if not recommendation:
             recommendation = Recommendation(
-                owner=self,
-                user_ids=[],
-                last_recommended_at=pendulum.yesterday().int_timestamp
+                owner=self, user_ids=[], last_recommended_at=pendulum.yesterday().int_timestamp
             )
             recommendation.save()
             recommendation.reload()
@@ -267,23 +247,34 @@ class User(db.Document):
             created_at=pendulum.now().int_timestamp
         ).save()
 
-    def purchase(self, platform=None, order_id=None, product_id=None, amount=None, purchase_time=None):
-        if amount <= 0 or not order_id or not purchase_time or not platform:
+    def purchase(self,
+                 platform=None,
+                 order_id=None,
+                 product_id=None,
+                 amount=None,
+                 created_at=None,
+                 purchase_time_ms=None):
+
+        if not product_id or amount <= 0 or not order_id or not created_at or not purchase_time_ms or not platform:
             raise ValueError("Illegal amount found. The amount must be bigger than 0.")
 
-        existing = Payment.objects(order_id=order_id).first()
+        existing = Payment.objects(order_id=order_id, purchase_time_ms=purchase_time_ms).first()
         if existing:
-            raise ValueError("Duplicate order id found.. terminating purchase progress..")
+            return Payment.Result.DUPLICATE
 
-        Payment(
+        payment = Payment(
             owner=self,
             type="PURCHASE",
             platform=platform,
             order_id=order_id,
             product_id=product_id,
             amount=amount,
-            created_at=int(purchase_time)
-        ).save()
+            created_at=int(created_at),
+            purchase_time_ms=int(purchase_time_ms)
+        )
+        payment.save()
+
+        return Payment.Result.PURCHASED
 
     def list_payments(self, to_json=False):
         if not to_json:
@@ -531,6 +522,44 @@ class User(db.Document):
         admin = Admin.objects(user=self).first()
         return admin is not None
 
+    def unregister(self):
+        unregister = Unregister(nickname=self.nickname, uid=self.uid, phone=self.phone, user=self)
+        unregister.save()
+
+        self.uid = None
+        self.phone = None
+        self.device_token = None
+        self.user_images = []
+        self.user_images_temp = []
+        self.available = False
+        self.status = Status.REJECTED
+        self.nickname = "탈퇴 한 회원"
+        self.save()
+
+        Post.objects(author=self).delete()
+        # Comment.objects(owner=user).delete()
+        # Request.objects(user_from=user).delete()
+        # Request.objects(user_to=user).delete()
+        # StarRating.objects(user_from=user).delete()
+        # StarRating.objects(user_to=user).delete()
+        # Contact.objects(owner=user).delete()
+        # Alarm.objects(owner=user).delete()
+
+
+class Unregister(db.Document):
+    meta = {
+        'strict': False,
+        'queryset_class': fm.BaseQuerySet,
+        'index_opts': INDEX_OPTS,
+        'index_background': INDEX_BACKGROUND,
+        'index_cls': INDEX_CLS,
+        'auto_create_index': AUTO_CREATE_INDEX,
+    }
+    uid = db.StringField()
+    phone = db.StringField()
+    nickname = db.StringField()
+    user = db.ReferenceField(User)
+
 
 class Comment(db.Document):
     meta = {
@@ -561,14 +590,16 @@ class Comment(db.Document):
                 "as": "children",
                 "maxDepth": 2,
             }
-        }, {"$project": {
-            "user_id": 1,
-            "comment": 1,
-            "comments": "$children",
-            "thumb_up_user_ids": 1,
-            "thumb_down_user_ids": 1,
-            "created_at": 1
-        }}]
+        }, {
+            "$project": {
+                "user_id": 1,
+                "comment": 1,
+                "comments": "$children",
+                "thumb_up_user_ids": 1,
+                "thumb_down_user_ids": 1,
+                "created_at": 1
+            }
+        }]
         aggregate = Comment.objects(**kwargs).aggregate(pipe_line)
         result = list(aggregate)
         result.sort(key=lambda x: x["created_at"], reverse=True)
@@ -933,6 +964,12 @@ class Recommendation(db.Document):
 
 
 class Payment(db.Document):
+
+    class Result(object):
+        DUPLICATE = "DUPLICATE"
+        INVALID = "INVALID"
+        PURCHASED = "PURCHASED"
+
     meta = {
         'strict': False,
         'queryset_class': fm.BaseQuerySet,
@@ -949,6 +986,7 @@ class Payment(db.Document):
     amount = db.IntField(required=True)  # PURCHASE: positive, CONSUME: negative
     platform = db.StringField()
     created_at = db.LongField(required=True)
+    purchase_time_ms = db.LongField()
 
 
 class Contact(db.Document):

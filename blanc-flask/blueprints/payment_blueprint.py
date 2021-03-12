@@ -1,4 +1,5 @@
 import json
+import pendulum
 
 from flask import Blueprint
 from flask import Response
@@ -62,22 +63,30 @@ def route_payment_purchase_ios(user_id: str):
     result = decode_receipt(token)
 
     if int(result.status) != 0:
-        response = json.dumps(dict(result=False))
+        response = json.dumps(dict(result=Payment.Result.INVALID))
         return Response(response, mimetype="application/json")
 
     purchase = result.receipt.in_app[0]
     product_id = purchase.product_id
     transaction_id = purchase.transaction_id
-    purchase_time = int(purchase.purchase_date_ms) / 1000
+    created_at = pendulum.now().int_timestamp
+    purchase_date_ms = int(purchase.purchase_date_ms)
     amount = get_amount(of=product_id)
 
-    user.purchase(
+    print("=================================")
+    print(product_id)
+    print(transaction_id)
+    print(purchase_date_ms)
+    print("=================================")
+
+    purchase_result = user.purchase(
         platform="IOS",
         order_id=transaction_id,
         product_id=product_id,
         amount=amount,
-        purchase_time=purchase_time
+        created_at=created_at,
+        purchase_time_ms=purchase_date_ms
     )
 
-    response = json.dumps(dict(result=True))
+    response = json.dumps(dict(result=purchase_result))
     return Response(response, mimetype="application/json")
