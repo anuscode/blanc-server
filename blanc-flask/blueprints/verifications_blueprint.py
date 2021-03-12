@@ -8,6 +8,7 @@ from flask import Response
 from shared import hash_service
 from shared import regex
 from shared import sms_service
+from model.models import User
 
 verifications_blueprint = Blueprint('verifications_blueprint', __name__)
 
@@ -55,6 +56,11 @@ def route_verify_sms_code():
 
     if int(expired_at) < pendulum.now().int_timestamp:
         response = json.dumps(dict(status=STATUS.EXPIRED_SMS_CODE))
+        return Response(response, mimetype="application/json")
+
+    existing_user = User.objects(phone=phone).first()
+    if existing_user:
+        response = json.dumps(dict(status=STATUS.DUPLICATE_PHONE_NUMBER))
         return Response(response, mimetype="application/json")
 
     sms_token = hash_service.generate_sms_token(phone, sms_code)
