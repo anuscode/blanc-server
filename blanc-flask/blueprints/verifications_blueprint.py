@@ -8,7 +8,6 @@ from flask import Response
 from shared import hash_service
 from shared import regex
 from shared import sms_service
-from model.models import User
 
 verifications_blueprint = Blueprint('verifications_blueprint', __name__)
 
@@ -17,7 +16,7 @@ GLOBAL_PHONE_REGEX = regex.GLOBAL_PHONE_REGEX
 PHONE_PREFIX_REGEX = regex.PHONE_PREFIX_REGEX
 
 
-class STATUS(object):
+class Status(object):
     SUCCEED_ISSUE = "SUCCEED_ISSUE"
     FAILED_ISSUE = "FAILED_ISSUE"
     INVALID_PHONE_NUMBER = "INVALID_PHONE_NUMBER"
@@ -34,7 +33,7 @@ def route_issue_sms_code():
     phone = normalize_phone_number(phone)
     phone, match = validate_phone_regex(phone)
     if not match:
-        response = json.dumps(dict(status=STATUS.INVALID_PHONE_NUMBER))
+        response = json.dumps(dict(status=Status.INVALID_PHONE_NUMBER))
         return Response(response, mimetype="application/json")
 
     issue_result = issue(phone)
@@ -51,22 +50,22 @@ def route_verify_sms_code():
     sms_code_to_verify = hash_service.get_sms_code(phone, expired_at)
 
     if sms_code != sms_code_to_verify:
-        response = json.dumps(dict(status=STATUS.INVALID_SMS_CODE))
+        response = json.dumps(dict(status=Status.INVALID_SMS_CODE))
         return Response(response, mimetype="application/json")
 
     if int(expired_at) < pendulum.now().int_timestamp:
-        response = json.dumps(dict(status=STATUS.EXPIRED_SMS_CODE))
+        response = json.dumps(dict(status=Status.EXPIRED_SMS_CODE))
         return Response(response, mimetype="application/json")
 
-    existing_user = User.objects(phone=phone).first()
-    if existing_user:
-        response = json.dumps(dict(status=STATUS.DUPLICATE_PHONE_NUMBER))
-        return Response(response, mimetype="application/json")
+    # existing_user = User.objects(phone=phone).first()
+    # if existing_user:
+    #     response = json.dumps(dict(status=STATUS.DUPLICATE_PHONE_NUMBER))
+    #     return Response(response, mimetype="application/json")
 
     sms_token = hash_service.generate_sms_token(phone, sms_code)
     response = json.dumps(dict(
         phone=phone,
-        status=STATUS.VERIFIED_SMS_CODE,
+        status=Status.VERIFIED_SMS_CODE,
         sms_code=sms_code,
         expired_at=int(expired_at),
         sms_token=sms_token)
@@ -92,7 +91,7 @@ def issue(phone):
     response = sms_service.send(phone=phone, msg=message)
     success = response.get("success_cnt")
     error = response.get("error_cnt")
-    status = STATUS.SUCCEED_ISSUE if success == 1 and error == 0 else STATUS.FAILED_ISSUE
+    status = Status.SUCCEED_ISSUE if success == 1 and error == 0 else Status.FAILED_ISSUE
     return dict(
         status=status,
         sms_code=sms_code,

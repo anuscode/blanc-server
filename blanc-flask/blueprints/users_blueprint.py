@@ -19,7 +19,6 @@ from firebase_admin import storage
 from firebase_admin import auth
 from firebase_admin._auth_utils import UserNotFoundError
 from model.models import Alarm, User, UserImage, Request, StarRating, Setting, Post, Contact
-from model.models import Status
 from shared import regex
 from shared import message_service
 from shared.annotation import id_token_required
@@ -268,7 +267,7 @@ def route_upload_user_image(user_id: str, index: int):
     else:  # update existing one
         current_image_at_index.url = blob.public_url
         user.user_images_temp = sorted(user_images_temp, key=lambda x: x.index)
-    user.status = Status.OPENED
+    user.status = User.Status.OPENED
     user.save()
 
     updated_image = next((x for x in user_images_temp if x.index == index), None)
@@ -283,7 +282,7 @@ def route_update_user_status_to_approved(user_id: str):
     user = User.objects.get_or_404(id=user_id)
 
     user.user_images = user.user_images_temp
-    user.status = Status.APPROVED
+    user.status = User.Status.APPROVED
     user.available = True
     user.save()
 
@@ -299,7 +298,7 @@ def route_update_user_status_to_rejected(user_id: str):
     user = User.objects.get_or_404(id=user_id)
 
     user.user_images = user.user_images_temp
-    user.status = Status.REJECTED
+    user.status = User.Status.REJECTED
     user.save()
 
     response = encode(user.to_mongo())
@@ -311,7 +310,7 @@ def route_update_user_status_pending(user_id: str):
     user = User.objects.get_or_404(id=user_id)
     user.identify(request)
 
-    user.status = Status.PENDING
+    user.status = User.Status.PENDING
     user.save()
 
     response = encode(user.to_mongo())
@@ -323,7 +322,7 @@ def route_delete_user_image(user_id: str, index: int):
     user = User.objects.get_or_404(id=user_id)
     user.identify(request)
 
-    if user.available and user.status == Status.APPROVED:
+    if user.available and user.status == User.Status.APPROVED:
         is_same = compare_user_images_and_temps(
             user.user_images, user.user_images_temp
         )
@@ -341,7 +340,7 @@ def route_delete_user_image(user_id: str, index: int):
          if user_image_temp.index == index), None)
 
     user.update(pull__user_images_temp=user_image_to_remove)
-    user.status = Status.OPENED
+    user.status = User.Status.OPENED
     user.save()
     user.reload()
 
@@ -580,7 +579,7 @@ def route_register_user():
     if not user:
         user = User(uid=uid,
                     phone=phone,
-                    status=Status.OPENED,
+                    status=User.Status.OPENED,
                     available=False,
                     last_login_at=pendulum.now().int_timestamp)
         user.save()
@@ -599,7 +598,7 @@ def route_unregister_user(user_id: str):
 
     if user.available:
         abort(500)
-    if user.status != Status.PENDING:
+    if user.status != User.Status.PENDING:
         abort(500)
     if user.user_images:
         abort(500)

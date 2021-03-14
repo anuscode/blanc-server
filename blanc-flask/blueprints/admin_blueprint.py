@@ -5,7 +5,6 @@ from flask import Blueprint
 from flask import Response
 from flask import request
 from model.models import User
-from model.models import Status
 from shared import message_service
 from shared.json_encoder import encode
 
@@ -41,7 +40,7 @@ def route_accept_users(user_id: str):
     user = User.objects.get_or_404(id=user_id)
 
     user.user_images = user.user_images_temp
-    user.status = Status.APPROVED
+    user.status = User.Status.APPROVED
     user.available = True
     user.save()
 
@@ -61,7 +60,7 @@ def route_reject_users(user_id: str):
 
     user = User.objects.get_or_404(id=user_id)
 
-    user.status = Status.REJECTED
+    user.status = User.Status.REJECTED
     user.save()
 
     message_service.push(dict(push_for="REJECTION"), user.device_token)
@@ -80,7 +79,7 @@ def route_block_users(user_id: str):
 
     user = User.objects.get_or_404(id=user_id)
 
-    user.status = Status.BLOCKED
+    user.status = User.Status.BLOCKED
     user.available = False
     user.save()
 

@@ -48,15 +48,6 @@ def _get_index_at(cursor, index):
         return None
 
 
-class Status(object):
-    OPENED = "OPENED"
-    PENDING = "PENDING"
-    APPROVED = "APPROVED"
-    REJECTED = "REJECTED"
-    BLOCKED = "BLOCKED"
-    UNREGISTERED = "UNREGISTERED"
-
-
 class UserImage(db.EmbeddedDocument):
     index = db.IntField()
     url = db.StringField()
@@ -78,6 +69,14 @@ class User(db.Document):
             # (("location", "2dsphere"), '-birthed_at', '-star_rating_avg'),
         ]
     }
+
+    class Status(object):
+        OPENED = "OPENED"
+        PENDING = "PENDING"
+        APPROVED = "APPROVED"
+        REJECTED = "REJECTED"
+        BLOCKED = "BLOCKED"
+        UNREGISTERED = "UNREGISTERED"
 
     uid = db.StringField()
     nickname = db.StringField()
@@ -520,7 +519,7 @@ class User(db.Document):
         admin = Admin.objects(user=self).first()
         return admin is not None
 
-    def unregister(self):
+    def withdraw(self):
         unregister = Unregister(nickname=self.nickname, uid=self.uid, phone=self.phone, user=self)
         unregister.save()
 
@@ -530,7 +529,7 @@ class User(db.Document):
         self.user_images = []
         self.user_images_temp = []
         self.available = False
-        self.status = Status.REJECTED
+        self.status = User.Status.REJECTED
         self.nickname = "탈퇴 한 회원"
         self.save()
 
@@ -1007,6 +1006,10 @@ class Admin(db.Document):
 
 
 class Push(db.EmbeddedDocument):
+    class Type(object):
+        APPROVED = "APPROVED"
+        REJECTED = "REJECTED"
+
     poke = db.BooleanField(default=True)
     request = db.BooleanField(default=True)
     comment = db.BooleanField(default=True)
