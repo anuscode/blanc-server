@@ -140,9 +140,7 @@ class User(db.Document):
     def list_users_rated_me(self):
         star_ratings = StarRating.objects(user_to=self).order_by("-rated_at").as_pymongo()
         score_repository = {
-            str(s.get("user_from")): dict(
-                score=s.get("score", 0), rated_at=s.get("rated_at")
-            ) for s in star_ratings
+            str(s.get("user_from")): dict(score=s.get("score", 0), rated_at=s.get("rated_at")) for s in star_ratings
         }
         raters = User.list(id__in=score_repository.keys()).as_pymongo()
 
@@ -964,7 +962,6 @@ class Recommendation(db.Document):
 
 
 class Payment(db.Document):
-
     class Result(object):
         DUPLICATE = "DUPLICATE"
         INVALID = "INVALID"
