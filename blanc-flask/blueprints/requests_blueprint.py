@@ -89,7 +89,7 @@ def route_create_request(user_id: str, r_type: int):
     alarm = Alarm.create_alarm(
         user_from=user_from,
         user_to=user_to,
-        push_for="REQUEST",
+        event="REQUEST",
         request=_request,
         message="{nickname} 님이 당신에게 친구 신청을 보냈습니다.".format(nickname=user_from.nickname))
     alarm_record = alarm.records[-1]
@@ -138,7 +138,7 @@ def route_update_response_of_request(request_id: str, result: int):
         alarm = Alarm.create_alarm(
             user_from=user_alarm_from,
             user_to=user_alarm_to,
-            push_for="MATCHED",
+            event="MATCHED",
             request=_request,
             conversation=conversation,
             message="{nickname} 님과 연결 되었습니다.".format(nickname=_request.user_to.nickname))

@@ -44,7 +44,7 @@ def route_accept_users(user_id: str):
     user.available = True
     user.save()
 
-    message_service.push(dict(push_for="APPROVAL"), user.device_token)
+    message_service.push(dict(event="APPROVAL"), user.device_token)
 
     return Response("", mimetype="application/json")
 
@@ -63,7 +63,7 @@ def route_reject_users(user_id: str):
     user.status = User.Status.REJECTED
     user.save()
 
-    message_service.push(dict(push_for="REJECTION"), user.device_token)
+    message_service.push(dict(event="REJECTION"), user.device_token)
 
     return Response("", mimetype="application/json")
 
@@ -83,6 +83,6 @@ def route_block_users(user_id: str):
     user.available = False
     user.save()
 
-    message_service.push(dict(push_for="BLOCK"), user.device_token)
+    message_service.push(dict(event="BLOCK"), user.device_token)
 
     return Response("", mimetype="application/json")

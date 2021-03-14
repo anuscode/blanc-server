@@ -845,8 +845,13 @@ class AlarmRecord(db.EmbeddedDocument):
         'strict': False,
         'queryset_class': fm.BaseQuerySet
     }
+
+    class Event(object):
+        APPROVED = "APPROVED"
+        REJECTED = "REJECTED"
+
     id = db.ObjectIdField(required=True, default=lambda: ObjectId())
-    push_for = db.StringField(required=True)
+    event = db.StringField(required=True)
     user_id = db.ObjectIdField()
     post_id = db.ObjectIdField()
     comment_id = db.ObjectIdField()
@@ -858,12 +863,9 @@ class AlarmRecord(db.EmbeddedDocument):
     is_read = db.BooleanField()
 
     def as_dict(self, user: User = None):
-        user = user or User.objects(id=self.user_id).first()
+        user = user or User.objects.get_or_404(id=self.user_id)
 
-        if not user:
-            raise db.errors.DoesNotExist("Can't find the such user.")
-
-        push_for = self.push_for
+        event = self.event
         nickname = user.nickname or ""
         user_image = next(iter(user.user_images or []), None)
         image_url = user_image.url if user_image else ""
@@ -888,7 +890,7 @@ class AlarmRecord(db.EmbeddedDocument):
             request_id=str(request_id),
             conversation_id=str(conversation_id),
             message_id=str(message_id),
-            push_for=push_for,
+            event=event,
             nickname=nickname,
             image_url=image_url,
             message=message,
@@ -913,7 +915,7 @@ class Alarm(db.Document):
     )
 
     @classmethod
-    def create_alarm(cls, push_for=None, user_from=None, user_to=None,
+    def create_alarm(cls, event=None, user_from=None, user_to=None,
                      conversation=None, post=None, comment=None,
                      request=None, message=None):
 
@@ -927,7 +929,7 @@ class Alarm(db.Document):
             alarm = Alarm(owner=user_to).save()
 
         push = AlarmRecord(
-            push_for=push_for,
+            event=event,
             user_id=user_from.id,
             post_id=post.id if post else None,
             comment_id=comment.id if comment else None,
@@ -1005,31 +1007,6 @@ class Admin(db.Document):
     user = db.ReferenceField(User, required=True, reverse_delete_rule=db.CASCADE, unique=True)
 
 
-class Push(db.EmbeddedDocument):
-    class Type(object):
-        APPROVED = "APPROVED"
-        REJECTED = "REJECTED"
-
-    poke = db.BooleanField(default=True)
-    request = db.BooleanField(default=True)
-    comment = db.BooleanField(default=True)
-    high_rate = db.BooleanField(default=True)
-    match = db.BooleanField(default=True)
-    favorite_comment = db.BooleanField(default=True)
-    conversation = db.BooleanField(default=True)
-    lookup = db.BooleanField(default=True)
-
-    def set(self, push: dict):
-        self.poke = push.get("poke", False)
-        self.request = push.get("request", False)
-        self.comment = push.get("comment", False)
-        self.high_rate = push.get("high_rate", False)
-        self.match = push.get("match", False)
-        self.favorite_comment = push.get("favorite_comment", False)
-        self.conversation = push.get("conversation", False)
-        self.lookup = push.get("lookup", False)
-
-
 class Setting(db.Document):
     meta = {
         'strict': False,
@@ -1040,5 +1017,26 @@ class Setting(db.Document):
         'auto_create_index': AUTO_CREATE_INDEX,
         'indexes': ['owner']
     }
+
+    class Push(db.EmbeddedDocument):
+        poke = db.BooleanField(default=True)
+        request = db.BooleanField(default=True)
+        comment = db.BooleanField(default=True)
+        high_rate = db.BooleanField(default=True)
+        match = db.BooleanField(default=True)
+        favorite_comment = db.BooleanField(default=True)
+        conversation = db.BooleanField(default=True)
+        lookup = db.BooleanField(default=True)
+
+        def set(self, push: dict):
+            self.poke = push.get("poke", False)
+            self.request = push.get("request", False)
+            self.comment = push.get("comment", False)
+            self.high_rate = push.get("high_rate", False)
+            self.match = push.get("match", False)
+            self.favorite_comment = push.get("favorite_comment", False)
+            self.conversation = push.get("conversation", False)
+            self.lookup = push.get("lookup", False)
+
     owner = db.ReferenceField(User, required=True, reverse_delete_rule=db.CASCADE, unique=True)
     push = db.EmbeddedDocumentField(Push, default=Push())

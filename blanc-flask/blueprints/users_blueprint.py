@@ -229,7 +229,7 @@ def route_update_registration_token(device_token: str):
     if is_update_required and existing_device_token is not None:
         try:
             message = messaging.Message(
-                data=dict(push_for="LOG_OUT"),
+                data=dict(event="LOG_OUT"),
                 token=existing_device_token,
                 apns=messaging.APNSConfig(),
                 android=messaging.AndroidConfig(priority="high"),
@@ -286,7 +286,7 @@ def route_update_user_status_to_approved(user_id: str):
     user.available = True
     user.save()
 
-    data = dict(push_for="APPROVAL")
+    data = dict(event="APPROVAL")
     message_service.push(data, user.device_token)
 
     return Response("", mimetype="application/json")
@@ -437,7 +437,7 @@ def route_update_star_rating(user_id: str, score: int):
             alarm = Alarm.create_alarm(
                 user_from=user_from,
                 user_to=user_to,
-                push_for="STAR_RATING",
+                event="STAR_RATING",
                 message="{nickname} 님이 당신을 높게 평가 하였습니다.".format(nickname=user_from.nickname))
             alarm_record = alarm.records[-1]
             data = alarm_record.as_dict()
@@ -499,7 +499,7 @@ def route_push_look_up(user_id: str):
     user_to = User.get(id=user_id)
 
     message_service.push(dict(
-        push_for="LOOK_UP",
+        event="LOOK_UP",
         user_id=str(user_from.id),
         nickname=user_from.nickname,
         image_url=user_from.get_first_image(),
@@ -517,7 +517,7 @@ def route_push_poke(user_id):
     user_to = User.get(id=user_id)
 
     alarm = Alarm.create_alarm(
-        push_for="POKE",
+        event="POKE",
         user_from=user_from,
         user_to=user_to,
         message="{nickname} 님이 당신을 찔렀습니다.".format(nickname=user_from.nickname)
