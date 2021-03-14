@@ -840,18 +840,46 @@ class Conversation(db.Document):
     available_at = db.LongField()
 
 
+class _Event(object):
+    LOG_OUT = "LOG_OUT"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    BLOCKED = "BLOCKED"
+    CONVERSATION = "CONVERSATION"
+    POKE = "POKE"
+    REQUEST = "REQUEST"
+    COMMENT = "COMMENT"
+    FAVORITE = "FAVORITE"
+    MATCHED = "MATCHED"
+    THUMB_UP = "THUMB_UP"
+    OPENED = "OPENED"
+    LOOK_UP = "LOOK_UP"
+    STAR_RATING = "STAR_RATING"
+
+
 class AlarmRecord(db.EmbeddedDocument):
     meta = {
         'strict': False,
         'queryset_class': fm.BaseQuerySet
     }
 
-    class Event(object):
-        APPROVED = "APPROVED"
-        REJECTED = "REJECTED"
-
     id = db.ObjectIdField(required=True, default=lambda: ObjectId())
-    event = db.StringField(required=True)
+    event = db.StringField(required=True, choices=[
+        _Event.LOG_OUT,
+        _Event.APPROVED,
+        _Event.REJECTED,
+        _Event.BLOCKED,
+        _Event.CONVERSATION,
+        _Event.POKE,
+        _Event.REQUEST,
+        _Event.COMMENT,
+        _Event.FAVORITE,
+        _Event.MATCHED,
+        _Event.THUMB_UP,
+        _Event.OPENED,
+        _Event.LOOK_UP,
+        _Event.STAR_RATING
+    ])
     user_id = db.ObjectIdField()
     post_id = db.ObjectIdField()
     comment_id = db.ObjectIdField()
@@ -909,15 +937,23 @@ class Alarm(db.Document):
         'auto_create_index': AUTO_CREATE_INDEX,
         'indexes': ['owner']
     }
+
+    class Event(_Event):
+        pass
+
     owner = db.ReferenceField(User, required=True, reverse_delete_rule=db.CASCADE, unique=True)
-    records = db.SortedListField(
-        db.EmbeddedDocumentField(AlarmRecord), ordering="created_at", reverse=True
-    )
+    records = db.SortedListField(db.EmbeddedDocumentField(AlarmRecord), ordering="created_at", reverse=True)
 
     @classmethod
-    def create_alarm(cls, event=None, user_from=None, user_to=None,
-                     conversation=None, post=None, comment=None,
-                     request=None, message=None):
+    def create_alarm(cls,
+                     event=None,
+                     user_from=None,
+                     user_to=None,
+                     conversation=None,
+                     post=None,
+                     comment=None,
+                     request=None,
+                     message=None):
 
         current_time_stamp = pendulum.now().int_timestamp
 
@@ -963,6 +999,7 @@ class Recommendation(db.Document):
 
 
 class Payment(db.Document):
+
     class Result(object):
         DUPLICATE = "DUPLICATE"
         INVALID = "INVALID"

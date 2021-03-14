@@ -4,7 +4,7 @@ from flask import abort
 from flask import Blueprint
 from flask import Response
 from flask import request
-from model.models import AlarmRecord, User, Conversation, EmbeddedMessage
+from model.models import Alarm, AlarmRecord, User, Conversation, EmbeddedMessage
 from shared import message_service
 from shared.annotation import id_token_required
 from shared.annotation import time_lapse
@@ -93,7 +93,7 @@ def route_create_message(conversation_id: str, message: str):
 
     for user_to in user_to_list:
         message_service.push(dict(
-            event="CONVERSATION",
+            event=Alarm.Event.CONVERSATION,
             nickname=user_from.nickname,
             user_id=str(user_from.id),
             image_url=image_url,
@@ -144,7 +144,7 @@ def route_update_conversation_available(conversation_id: str, available: bool):
         if user_to.uid == user_to_open_room.uid:
             continue
         push = AlarmRecord(
-            event="OPENED",
+            event=Alarm.Event.OPENED,
             user_id=user_to_open_room.id,
             created_at=pendulum.now().int_timestamp,
             conversation_id=conversation.id,
@@ -156,7 +156,7 @@ def route_update_conversation_available(conversation_id: str, available: bool):
     # push system message as conversation message
     for participant in conversation.participants:
         message_service.push(dict(
-            event="CONVERSATION",
+            event=Alarm.Event.CONVERSATION,
             created_at=str(pendulum.now().int_timestamp),
             conversation_id=str(conversation.id),
             message_id=str(embedded_message.id),
@@ -193,7 +193,7 @@ def route_leave_conversation(conversation_id: str, user_id: str):
 
     for participant in conversation.participants:
         message_service.push(dict(
-            event="CONVERSATION",
+            event=Alarm.Event.CONVERSATION,
             created_at=str(pendulum.now().int_timestamp),
             conversation_id=str(conversation.id),
             message_id=str(embedded_message.id),

@@ -4,7 +4,7 @@ from flask import abort
 from flask import Blueprint
 from flask import Response
 from flask import request
-from model.models import User
+from model.models import User, Alarm
 from shared import message_service
 from shared.json_encoder import encode
 
@@ -44,7 +44,7 @@ def route_accept_users(user_id: str):
     user.available = True
     user.save()
 
-    message_service.push(dict(event="APPROVAL"), user.device_token)
+    message_service.push(dict(event=Alarm.Event.APPROVED), user.device_token)
 
     return Response("", mimetype="application/json")
 
@@ -63,7 +63,7 @@ def route_reject_users(user_id: str):
     user.status = User.Status.REJECTED
     user.save()
 
-    message_service.push(dict(event="REJECTION"), user.device_token)
+    message_service.push(dict(event=Alarm.Event.REJECTED), user.device_token)
 
     return Response("", mimetype="application/json")
 
@@ -83,6 +83,6 @@ def route_block_users(user_id: str):
     user.available = False
     user.save()
 
-    message_service.push(dict(event="BLOCK"), user.device_token)
+    message_service.push(dict(event=Alarm.Event.BLOCKED), user.device_token)
 
     return Response("", mimetype="application/json")
