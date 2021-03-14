@@ -37,9 +37,26 @@ KAKAO_AUTH_URL = "https://kapi.kakao.com/v2/user/me"
 http = urllib3.PoolManager()
 
 UPDATE_ABLE_FIELDS = {
-    'available', 'birthed_at', 'blood_id', 'body_id', 'charm_ids', 'drink_id', 'education', 'height', 'ideal_type_ids',
-    'interest_ids', 'introduction', 'last_login_at', 'nickname', 'occupation', 'religion_id', 'sex', 'smoking_id',
-    'star_rating_avg', 'status', 'user_images_temp'
+    'available',
+    'birthed_at',
+    'blood_id',
+    'body_id',
+    'charm_ids',
+    'drink_id',
+    'education',
+    'height',
+    'ideal_type_ids',
+    'interest_ids',
+    'introduction',
+    'last_login_at',
+    'nickname',
+    'occupation',
+    'religion_id',
+    'sex',
+    'smoking_id',
+    'star_rating_avg',
+    'status',
+    'user_images_temp'
 }
 
 STRIP_REQUIRED_FIELDS = ["nickname", "occupation", "education"]
@@ -135,6 +152,7 @@ def route_update_user_profile(user_id: str):
             raise ValueError("{0} is required value.".format(value))
         value = value.strip()
         params[key] = value
+
     user.update(**params)
 
     return Response("", mimetype="application/json")
@@ -276,7 +294,7 @@ def route_upload_user_image(user_id: str, index: int):
     return Response(response, mimetype="application/json")
 
 
-@users_blueprint.route("/users/<user_id>/status/approval", methods=["PUT"])
+@users_blueprint.route("/users/<user_id>/status/approved", methods=["PUT"])
 def route_update_user_status_to_approved(user_id: str):
     """Endpoint for updating user status approved."""
     user = User.objects.get_or_404(id=user_id)
@@ -292,13 +310,14 @@ def route_update_user_status_to_approved(user_id: str):
     return Response("", mimetype="application/json")
 
 
-@users_blueprint.route("/users/<user_id>/status/rejection", methods=["PUT"])
+@users_blueprint.route("/users/<user_id>/status/rejected", methods=["PUT"])
 def route_update_user_status_to_rejected(user_id: str):
     """Endpoint for updating user status rejected."""
     user = User.objects.get_or_404(id=user_id)
 
     user.user_images = user.user_images_temp
     user.status = User.Status.REJECTED
+    user.available = False
     user.save()
 
     response = encode(user.to_mongo())
@@ -311,6 +330,7 @@ def route_update_user_status_pending(user_id: str):
     user.identify(request)
 
     user.status = User.Status.PENDING
+    user.available = False
     user.save()
 
     response = encode(user.to_mongo())
@@ -477,7 +497,7 @@ def route_update_last_login_at(user_id: str):
 
 @users_blueprint.route("/users/<user_id>/contacts", methods=["PUT"])
 @id_token_required
-def route_user_block(user_id: str):
+def route_patch_user_contacts(user_id: str):
     user = User.objects.get_or_404(id=user_id)
     user.identify(request)
 
