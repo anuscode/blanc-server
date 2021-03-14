@@ -67,37 +67,6 @@ def get_coordinates_by_ip(req):
         return longitude, latitude
 
 
-@users_blueprint.route("/users", methods=["POST"])
-@id_token_required
-def route_create_user():
-    uid = request.headers.get("uid", None)
-    phone = request.form.get("phone", None)
-    sms_code = request.form.get("sms_code", None)
-    sms_token = request.form.get("sms_token", None)
-
-    proof = verify_sms_token(sms_token, phone, sms_code)
-    if not proof:
-        abort(401)
-
-    if not phone:
-        raise ValueError("phone is required value to create an user.")
-
-    user = User.objects(uid=uid).first()
-
-    if not user:
-        user = User(uid=uid,
-                    phone=phone,
-                    status=Status.OPENED,
-                    available=False,
-                    last_login_at=pendulum.now().int_timestamp)
-        user.save()
-        alarm = Alarm(owner=user, records=[])
-        alarm.save()
-
-    response = encode(user.to_mongo())
-    return Response(response, mimetype="application/json")
-
-
 @users_blueprint.route("/users/custom_token/kakao", methods=["POST"])
 def route_authentication_with_kakao():
     kakao_token = request.headers.get("id_token", None)
@@ -265,7 +234,8 @@ def route_update_registration_token(device_token: str):
                 token=existing_device_token,
                 apns=messaging.APNSConfig(),
                 android=messaging.AndroidConfig(priority="high"),
-                notification=messaging.Notification())
+                notification=messaging.Notification()
+            )
             messaging.send(message)
         except Exception as e:
             logging.exception(e)
@@ -590,9 +560,40 @@ def route_update_push_setting(user_id: str):
     return Response("", mimetype="application/json")
 
 
-@users_blueprint.route("/users/<user_id>/cancel", methods=["DELETE"])
+@users_blueprint.route("/users/register", methods=["POST"])
 @id_token_required
-def route_cancel_register_user(user_id: str):
+def route_register_user():
+    uid = request.headers.get("uid", None)
+    phone = request.form.get("phone", None)
+    sms_code = request.form.get("sms_code", None)
+    sms_token = request.form.get("sms_token", None)
+
+    proof = verify_sms_token(sms_token, phone, sms_code)
+    if not proof:
+        abort(401)
+
+    if not phone:
+        raise ValueError("phone is required value to create an user.")
+
+    user = User.objects(uid=uid).first()
+
+    if not user:
+        user = User(uid=uid,
+                    phone=phone,
+                    status=Status.OPENED,
+                    available=False,
+                    last_login_at=pendulum.now().int_timestamp)
+        user.save()
+        alarm = Alarm(owner=user, records=[])
+        alarm.save()
+
+    response = encode(user.to_mongo())
+    return Response(response, mimetype="application/json")
+
+
+@users_blueprint.route("/users/<user_id>/unregister", methods=["DELETE"])
+@id_token_required
+def route_unregister_user(user_id: str):
     user = User.objects.get_or_404(id=user_id)
     user.identify(request)
 
@@ -609,12 +610,12 @@ def route_cancel_register_user(user_id: str):
     return Response("", mimetype="application/json")
 
 
-@users_blueprint.route("/users/<user_id>/unregister", methods=["PUT"])
+@users_blueprint.route("/users/<user_id>/withdraw", methods=["PUT"])
 @id_token_required
-def route_unregister_user(user_id: str):
+def route_withdraw_user(user_id: str):
     user = User.objects.get_or_404(id=user_id)
     user.identify(request)
-    user.unregister()
+    user.withdraw()
     return Response("", mimetype="application/json")
 
 
