@@ -85,7 +85,10 @@ def route_create_user():
     user = User.objects(uid=uid).first()
 
     if not user:
-        user = User(uid=uid, phone=phone, status=Status.OPENED, available=False,
+        user = User(uid=uid,
+                    phone=phone,
+                    status=Status.OPENED,
+                    available=False,
                     last_login_at=pendulum.now().int_timestamp)
         user.save()
         alarm = Alarm(owner=user, records=[])
@@ -95,7 +98,7 @@ def route_create_user():
     return Response(response, mimetype="application/json")
 
 
-@users_blueprint.route("/users/kakao", methods=["POST"])
+@users_blueprint.route("/users/custom_token/kakao", methods=["POST"])
 def route_authentication_with_kakao():
     kakao_token = request.headers.get("id_token", None)
 
@@ -189,10 +192,11 @@ def route_list_users_i_rated_high(user_id: str):
     return Response(response, mimetype="application/json")
 
 
-@users_blueprint.route("/users/<user_id>", methods=["GET"])
-def route_get_user(user_id):
+@users_blueprint.route("/users", methods=["GET"])
+def route_get_user():
     """Endpoint for getting user."""
-    user = User.get(id=user_id)
+    query_params = request.args.to_dict(flat=True)
+    user = User.get(**query_params)
     response = encode(user.to_mongo())
     return Response(response, mimetype="application/json")
 
@@ -502,14 +506,6 @@ def route_update_last_login_at(user_id: str):
     return Response("", mimetype="application/json")
 
 
-@users_blueprint.route("/users/uid/<uid>", methods=["GET"])
-def route_user_exists(uid: str):
-    user = User.objects(uid=uid).first()
-    result = True if user else False
-    return Response(
-        json.dumps(dict(exists=result)), mimetype="application/json")
-
-
 @users_blueprint.route("/users/<user_id>/contacts", methods=["PUT"])
 @id_token_required
 def route_user_block(user_id: str):
@@ -524,25 +520,6 @@ def route_user_block(user_id: str):
     user.set_contact(phones)
 
     return Response("", mimetype="application/json")
-
-
-@users_blueprint.route("/users/phone/<phone>/sms_code/<sms_code>/sms_token/<sms_token>", methods=["GET"])
-def route_find_account_by_phone(phone: str, sms_code: str, sms_token: str):
-    proof = verify_sms_token(sms_token, phone, sms_code)
-    if not proof:
-        abort(401)
-
-    user = User.objects(phone=phone).first()
-    if user:
-        firebase_user = auth.get_user(user.uid)
-        if firebase_user.email:
-            return Response(json.dumps(dict(email=firebase_user.email, is_exists=True)), mimetype="application/json")
-        if "KAKAO" in firebase_user.uid:
-            return Response(json.dumps(dict(email="카카오 계정", is_exists=True)), mimetype="application/json")
-        else:
-            abort(404)
-    else:
-        return Response(json.dumps(dict(email="", is_exists=False)), mimetype="application/json")
 
 
 @users_blueprint.route("/users/<user_id>/push/lookup", methods=["POST"])
