@@ -95,11 +95,7 @@ def create_app(config=None, mongo=True, firebase=True) -> Flask:
     app.register_blueprint(payment_blueprint)
     app.register_blueprint(verifications_blueprint)
     app.register_blueprint(admin_blueprint)
-    
-    @app.errorhandler(404)
-    def not_found_error(error):
-        return str(error), 404
-    
+
     if mongo:
         init_mongo(app)
     if firebase:
