@@ -999,7 +999,6 @@ class Recommendation(db.Document):
 
 
 class Payment(db.Document):
-
     class Result(object):
         DUPLICATE = "DUPLICATE"
         INVALID = "INVALID"
@@ -1041,7 +1040,19 @@ class Contact(db.Document):
 
 
 class Admin(db.Document):
-    user = db.ReferenceField(User, required=True, reverse_delete_rule=db.CASCADE, unique=True)
+    meta = {
+        'strict': False,
+        'queryset_class': fm.BaseQuerySet,
+        'index_opts': INDEX_OPTS,
+        'index_background': INDEX_BACKGROUND,
+        'index_cls': INDEX_CLS,
+        'auto_create_index': AUTO_CREATE_INDEX,
+        'indexes': []
+    }
+
+    uid = db.StringField(required=True, unique=True)
+    user = db.ReferenceField(User, reverse_delete_rule=db.CASCADE, unique=True)
+    available = db.BooleanField()
 
 
 class Setting(db.Document):
