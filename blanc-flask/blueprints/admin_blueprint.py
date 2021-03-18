@@ -1,5 +1,6 @@
-"""User blue print definitions."""
+"""Admin blue print definitions."""
 
+import json
 from flask import abort
 from flask import Blueprint
 from flask import Response
@@ -13,7 +14,7 @@ admin_blueprint = Blueprint("admin_blueprint", __name__)
 
 @admin_blueprint.route("/admin/session", methods=["GET"])
 def route_admin_session():
-    """Retrieves all pending users."""
+    """Checks session.."""
     uid = request.headers.get("uid", None)
     admin = Admin.objects(uid=uid).first()
 
@@ -36,6 +37,9 @@ def route_list_pending_users(status: str):
     uid = request.headers.get("uid", None)
     admin = Admin.objects.get_or_404(uid=uid)
 
+    if not admin.available:
+        abort(401)
+
     status = status or ""
     status = status.upper()
     users = User.objects(status=status).as_pymongo()
@@ -46,20 +50,78 @@ def route_list_pending_users(status: str):
 
 @admin_blueprint.route("/admin/posts", methods=["GET"])
 def route_list_posts():
-    """List all posts"""
+    """Lists all posts not filtering opposite sex things."""
+    uid = request.headers.get("uid", None)
+    admin = Admin.objects.get_or_404(uid=uid)
+
+    if not admin.available:
+        abort(401)
+
     last_id: str = request.args.get("last_id", None)
     per_page: int = int(request.args.get("per_page", 30))
 
-    params = dict(id__lt=last_id) if last_id else dict()
-    result = Post.list_posts(**params, limit=per_page)
+    params = dict(is_deleted=False, limit=per_page)
+    if last_id:
+        params["id__lt"] = last_id
+
+    result = Post.list_posts(**params)
 
     response = encode(list(result))
     return Response(response, mimetype="application/json")
 
 
+@admin_blueprint.route("/admin/posts/<post_id>", methods=["DELETE"])
+def route_delete_post(post_id: str):
+    """Deletes a post by admin."""
+    uid = request.headers.get("uid", None)
+    admin = Admin.objects.get_or_404(uid=uid)
+
+    if not admin.available:
+        abort(401)
+
+    post = Post.objects.get_or_404(id=post_id)
+    post.is_deleted = True
+    post.save()
+
+    return Response("", mimetype="application/json")
+
+
+@admin_blueprint.route("/admin/posts/<post_id>/comments/<comment_id>", methods=["DELETE"])
+def route_delete_comment(post_id: str, comment_id: str):
+    """Deletes a post by admin."""
+    uid = request.headers.get("uid", None)
+    admin = Admin.objects.get_or_404(uid=uid)
+
+    if not admin.available:
+        abort(401)
+
+    post = Post.objects.get_or_404(id=post_id)
+
+    def search_comment(comments: list, cid: str):
+        found = None
+        for c in comments:
+            if str(c.id) == cid:
+                found = c
+                break
+            if c.comments:
+                found = search_comment(c.comments, cid)
+            if found:
+                break
+        return found
+
+    comment = search_comment(post.comments, comment_id)
+    if comment:
+        comment.is_deleted = True
+        comment.save()
+    else:
+        abort(404)
+
+    return Response("", mimetype="application/json")
+
+
 @admin_blueprint.route("/admin/users/<user_id>/status/approved", methods=["PUT"])
 def route_approve_users(user_id: str):
-    """Updates user status to APPROVED."""
+    """Updates user status APPROVED."""
 
     uid = request.headers.get("uid", None)
     admin = Admin.objects.get_or_404(uid=uid)
@@ -80,7 +142,7 @@ def route_approve_users(user_id: str):
 
 @admin_blueprint.route("/admin/users/<user_id>/status/rejected", methods=["PUT"])
 def route_reject_users(user_id: str):
-    """Updates user status to REJECTED."""
+    """Updates user status REJECTED."""
 
     uid = request.headers.get("uid", None)
     admin = Admin.objects.get_or_404(uid=uid)
@@ -100,7 +162,7 @@ def route_reject_users(user_id: str):
 
 @admin_blueprint.route("/admin/users/<user_id>/status/blocked", methods=["PUT"])
 def route_block_users(user_id: str):
-    """Updates user status to BLOCKED."""
+    """Updates user status BLOCKED."""
 
     uid = request.headers.get("uid", None)
     admin = Admin.objects.get_or_404(uid=uid)

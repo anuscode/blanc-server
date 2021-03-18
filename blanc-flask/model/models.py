@@ -124,7 +124,7 @@ class User(db.Document):
             raise abort(401)
 
     def list_posts(self) -> list:
-        result = Post.list_posts(author=self.id)
+        result = Post.list_posts(author=self.id, is_deleted=False)
         return result
 
     def list_requests_to_me(self, response=None):
@@ -575,6 +575,7 @@ class Comment(db.Document):
     created_at = db.LongField(required=True)
     thumb_up_user_ids = db.ListField(db.ObjectIdField())
     thumb_down_user_ids = db.ListField(db.ObjectIdField())
+    is_deleted = db.BooleanField(default=False)
 
     @classmethod
     def list_comments(cls, **kwargs):
@@ -594,7 +595,8 @@ class Comment(db.Document):
                 "comments": "$children",
                 "thumb_up_user_ids": 1,
                 "thumb_down_user_ids": 1,
-                "created_at": 1
+                "created_at": 1,
+                "is_deleted": 1
             }
         }]
         aggregate = Comment.objects(**kwargs).aggregate(pipe_line)
@@ -656,10 +658,18 @@ class Post(db.Document):
     comments = db.ListField(db.ReferenceField(Comment, reverse_delete_rule=db.CASCADE))
     created_at = db.LongField(required=True)
     enable_comment = db.BooleanField()
-    is_deleted = db.BooleanField()
+    is_deleted = db.BooleanField(default=False)
 
     @classmethod
-    def create(cls, author=None, title=None, description=None, resources=None, created_at=None, enable_comment=None):
+    def create(cls,
+               author=None,
+               title=None,
+               description=None,
+               resources=None,
+               created_at=None,
+               enable_comment=None,
+               is_deleted=False):
+
         post = Post(
             author=author,
             author_sex=author.sex,
@@ -667,7 +677,8 @@ class Post(db.Document):
             description=description,
             resources=resources,
             created_at=created_at,
-            enable_comment=enable_comment
+            enable_comment=enable_comment,
+            is_deleted=is_deleted
         )
         post.save()
         post.reload()

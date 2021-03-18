@@ -70,11 +70,15 @@ def route_list_posts():
     last_id: str = request.args.get("last_id", None)
     per_page: int = int(request.args.get("per_page", 30))
 
-    params = dict(author_sex=opposite_sex)
+    params = dict(
+        author_sex=opposite_sex,
+        limit=per_page,
+        is_deleted=False
+    )
     if last_id:
         params["id__lt"] = last_id
 
-    result = Post.list_posts(**params, limit=per_page)
+    result = Post.list_posts(**params)
 
     response = encode(list(result))
     return Response(response, mimetype="application/json")
@@ -90,7 +94,8 @@ def route_get_post(post_id):
 @posts_blueprint.route('/posts/<post_id>', methods=['DELETE'])
 def delete_post(post_id):
     post = Post.objects.get_or_404(id=post_id)
-    post.delete()
+    post.is_deleted = True
+    post.save()
     response = json.dumps(dict(_id=str(post.id)))
     return Response(response, mimetype="application/json")
 
@@ -153,7 +158,8 @@ def route_create_comment(post_id: str):
         user_id=user.id,
         comment=comment,
         comments=[],  # child comments
-        created_at=pendulum.now().int_timestamp
+        created_at=pendulum.now().int_timestamp,
+        is_deleted=False
     ).save()
 
     post.add_comment(comment_to_create, parent_id=comment_id)
