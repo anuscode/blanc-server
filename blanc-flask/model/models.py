@@ -1099,3 +1099,22 @@ class Setting(db.Document):
 
     owner = db.ReferenceField(User, required=True, reverse_delete_rule=db.CASCADE, unique=True)
     push = db.EmbeddedDocumentField(Push, default=Push())
+
+
+class Report(db.Document):
+    meta = {
+        'strict': False,
+        'queryset_class': fm.BaseQuerySet,
+        'index_opts': INDEX_OPTS,
+        'index_background': INDEX_BACKGROUND,
+        'index_cls': INDEX_CLS,
+        'auto_create_index': AUTO_CREATE_INDEX,
+        'indexes': []
+    }
+    reporter = db.ReferenceField(User, reverse_delete_rule=db.CASCADE, unique=True)
+    reportee = db.ReferenceField(User, reverse_delete_rule=db.CASCADE, unique=True)
+    description = db.StringField()
+    reported_at = db.LongField(required=True)
+    is_resolved = db.BooleanField(default=False)
+    resolved_at = db.LongField()
+    report_images = db.ListField(db.StringField())

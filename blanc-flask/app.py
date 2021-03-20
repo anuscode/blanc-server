@@ -12,6 +12,7 @@ from blueprints.error_blueprint import errors_blue_print
 from blueprints.payment_blueprint import payment_blueprint
 from blueprints.verifications_blueprint import verifications_blueprint
 from blueprints.admin_blueprint import admin_blueprint
+from blueprints.report_blueprint import report_blueprint
 
 from config import DevConfig
 
@@ -95,6 +96,7 @@ def create_app(config=None, mongo=True, firebase=True) -> Flask:
     app.register_blueprint(payment_blueprint)
     app.register_blueprint(verifications_blueprint)
     app.register_blueprint(admin_blueprint)
+    app.register_blueprint(report_blueprint)
 
     if mongo:
         init_mongo(app)

@@ -118,7 +118,8 @@ def route_create_favorite(post_id: str):
         user_to=user_to,
         event=Alarm.Event.FAVORITE,
         post=post,
-        message="{nickname} 님이 당신의 게시물을 좋아합니다.".format(nickname=user_from.nickname))
+        message="{nickname} 님이 당신의 게시물을 좋아합니다.".format(nickname=user_from.nickname)
+    )
 
     alarm_record: AlarmRecord = alarm.records[-1]
     data: dict = alarm_record.as_dict()
