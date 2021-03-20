@@ -35,8 +35,16 @@ def route_create_report(reporter_id: str, reportee_id: str):
     for report_image in report_images:
         # update to image server
         bucket = storage.bucket()
-        blob = bucket.blob('report_images/{uid}/{timestamp}_{uuid}'.format(
-            uid=uid, uuid=uuid.uuid1(), timestamp=pendulum.now().int_timestamp)
+        reporter_nickname = reporter.nickname
+        reportee_nickname = reportee.nickname
+        report_url_format = 'report_images/{reporter_nickname}_{uid}/'\
+                            '{reporter_nickname}_{reportee_nickname}_{timestamp}_{uuid}'
+        blob = bucket.blob(report_url_format.format(
+            uid=uid,
+            reporter_nickname=reporter_nickname,
+            reportee_nickname=reportee_nickname,
+            timestamp=pendulum.now().int_timestamp,
+            uuid=uuid.uuid1())
         )
         blob.upload_from_file(report_image)
         report_image_urls.append(blob.public_url)
