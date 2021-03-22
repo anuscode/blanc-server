@@ -863,7 +863,8 @@ class _Event(object):
     FAVORITE = "FAVORITE"
     MATCHED = "MATCHED"
     THUMB_UP = "THUMB_UP"
-    OPENED = "OPENED"
+    CONVERSATION_OPENED = "CONVERSATION_OPENED"
+    CONVERSATION_LEFT = "CONVERSATION_LEFT"
     LOOK_UP = "LOOK_UP"
     STAR_RATING = "STAR_RATING"
 
@@ -887,7 +888,8 @@ class AlarmRecord(db.EmbeddedDocument):
         _Event.FAVORITE,
         _Event.MATCHED,
         _Event.THUMB_UP,
-        _Event.OPENED,
+        _Event.CONVERSATION_OPENED,
+        _Event.CONVERSATION_LEFT,
         _Event.LOOK_UP,
         _Event.STAR_RATING
     ])

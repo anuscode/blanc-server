@@ -144,7 +144,7 @@ def route_update_conversation_available(conversation_id: str, available: bool):
         if user_to.uid == user_to_open_room.uid:
             continue
         push = AlarmRecord(
-            event=Alarm.Event.OPENED,
+            event=Alarm.Event.CONVERSATION_OPENED,
             user_id=user_to_open_room.id,
             created_at=pendulum.now().int_timestamp,
             conversation_id=conversation.id,
@@ -192,14 +192,18 @@ def route_leave_conversation(conversation_id: str, user_id: str):
         conversation.delete()
 
     for participant in conversation.participants:
-        message_service.push(dict(
-            event=Alarm.Event.CONVERSATION,
-            created_at=str(pendulum.now().int_timestamp),
-            conversation_id=str(conversation.id),
-            message_id=str(embedded_message.id),
-            category="SYSTEM",
-            message=leave_message
-        ), participant.device_token, priority="high")
+        message_service.push(
+            dict(
+                event=Alarm.Event.CONVERSATION,
+                created_at=str(pendulum.now().int_timestamp),
+                conversation_id=str(conversation.id),
+                message_id=str(embedded_message.id),
+                category="SYSTEM",
+                message=leave_message
+            ),
+            participant.device_token,
+            priority="high"
+        )
 
     return Response("", mimetype="application/json")
 
