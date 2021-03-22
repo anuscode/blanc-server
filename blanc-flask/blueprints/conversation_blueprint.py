@@ -92,17 +92,21 @@ def route_create_message(conversation_id: str, message: str):
     user_to_list = [p for p in conversation.participants if p.id != user.id]
 
     for user_to in user_to_list:
-        message_service.push(dict(
-            event=Alarm.Event.CONVERSATION,
-            nickname=user_from.nickname,
-            user_id=str(user_from.id),
-            image_url=image_url,
-            created_at=str(pendulum.now().int_timestamp),
-            conversation_id=str(conversation.id),
-            message_id=str(embedded_message.id),
-            message=str(embedded_message.message),
-            category="MESSAGE",
-        ), user_to.device_token, priority="high")
+        message_service.push(
+            dict(
+                event=Alarm.Event.CONVERSATION,
+                nickname=user_from.nickname,
+                user_id=str(user_from.id),
+                image_url=image_url,
+                created_at=str(pendulum.now().int_timestamp),
+                conversation_id=str(conversation.id),
+                message_id=str(embedded_message.id),
+                message=str(embedded_message.message),
+                category="MESSAGE",
+            ),
+            user_to.device_token,
+            priority="high"
+        )
 
     response = encode(embedded_message.to_mongo())
     return Response(response, mimetype="application/json")
@@ -144,7 +148,7 @@ def route_update_conversation_available(conversation_id: str, available: bool):
         if user_to.uid == user_to_open_room.uid:
             continue
         push = AlarmRecord(
-            event=Alarm.Event.CONVERSATION_OPENED,
+            event=Alarm.Event.CONVERSATION_OPEN,
             user_id=user_to_open_room.id,
             created_at=pendulum.now().int_timestamp,
             conversation_id=conversation.id,
@@ -155,14 +159,18 @@ def route_update_conversation_available(conversation_id: str, available: bool):
 
     # push system message as conversation message
     for participant in conversation.participants:
-        message_service.push(dict(
-            event=Alarm.Event.CONVERSATION,
-            created_at=str(pendulum.now().int_timestamp),
-            conversation_id=str(conversation.id),
-            message_id=str(embedded_message.id),
-            category="SYSTEM",
-            message=BEGIN_CONVERSATION_MESSAGE
-        ), participant.device_token, priority="high")
+        message_service.push(
+            dict(
+                event=Alarm.Event.CONVERSATION,
+                created_at=str(pendulum.now().int_timestamp),
+                conversation_id=str(conversation.id),
+                message_id=str(embedded_message.id),
+                category="SYSTEM",
+                message=BEGIN_CONVERSATION_MESSAGE
+            ),
+            participant.device_token,
+            priority="high"
+        )
 
     return Response("", mimetype="application/json")
 
@@ -176,7 +184,7 @@ def route_leave_conversation(conversation_id: str, user_id: str):
         abort(401)
 
     conversation = Conversation.objects.get_or_404(id=conversation_id)
-    leave_message = "{nickname} 님이 대화를 종료 하셨습니다.".format(nickname=user.nickname)
+    leave_message = "{nickname} 님이 대화방을 나갔습니다.".format(nickname=user.nickname)
 
     embedded_message = EmbeddedMessage(
         conversation_id=conversation_id,
@@ -188,22 +196,30 @@ def route_leave_conversation(conversation_id: str, user_id: str):
     conversation.update(pull__participants=user, push__messages=embedded_message)
     conversation.reload()
 
-    if len(conversation.participants) == 0:
+    if not conversation.participants:
         conversation.delete()
+        return Response("", mimetype="application/json")
 
     for participant in conversation.participants:
-        message_service.push(
-            dict(
-                event=Alarm.Event.CONVERSATION,
-                created_at=str(pendulum.now().int_timestamp),
-                conversation_id=str(conversation.id),
-                message_id=str(embedded_message.id),
-                category="SYSTEM",
-                message=leave_message
-            ),
-            participant.device_token,
-            priority="high"
+        message_data = dict(
+            event=Alarm.Event.CONVERSATION,
+            created_at=str(pendulum.now().int_timestamp),
+            conversation_id=str(conversation.id),
+            message_id=str(embedded_message.id),
+            category="SYSTEM",
+            message=leave_message
         )
+        message_service.push(message_data, participant.device_token, priority="high")
+
+        leave_data = AlarmRecord(
+            event=Alarm.Event.CONVERSATION_LEAVE,
+            user_id=user_id,
+            created_at=pendulum.now().int_timestamp,
+            conversation_id=conversation.id,
+            message=leave_message
+        )
+        leave_data = leave_data.as_dict()
+        message_service.push(leave_data, participant.device_token, priority="high")
 
     return Response("", mimetype="application/json")
 
