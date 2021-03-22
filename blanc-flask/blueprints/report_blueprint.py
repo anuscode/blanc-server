@@ -37,8 +37,7 @@ def route_create_report(reporter_id: str, reportee_id: str):
         bucket = storage.bucket()
         reporter_nickname = reporter.nickname
         reportee_nickname = reportee.nickname
-        report_url_format = 'report_images/{reporter_nickname}_{uid}/'\
-                            '{reporter_nickname}_{reportee_nickname}_{timestamp}_{uuid}'
+        report_url_format = 'report_images/{uid}/{timestamp}_{uuid}.jpeg'
         blob = bucket.blob(report_url_format.format(
             uid=uid,
             reporter_nickname=reporter_nickname,
