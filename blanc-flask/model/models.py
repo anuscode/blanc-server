@@ -904,7 +904,7 @@ class AlarmRecord(db.EmbeddedDocument):
     is_read = db.BooleanField()
 
     def as_dict(self, user: User = None):
-        user = user or User.objects.get_or_404(id=self.user_id)
+        user = user or User.objects.get(id=self.user_id)
 
         event = self.event
         nickname = user.nickname or ""
