@@ -330,7 +330,6 @@ def route_update_user_status_pending(user_id: str):
     user.identify(request)
 
     user.status = User.Status.PENDING
-    user.available = False
     user.save()
 
     response = encode(user.to_mongo())
