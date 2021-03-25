@@ -152,7 +152,8 @@ def route_update_conversation_available(conversation_id: str, available: bool):
             user_id=user_to_open_room.id,
             created_at=pendulum.now().int_timestamp,
             conversation_id=conversation.id,
-            message="{nickname} 님이 대화방을 열었습니다.".format(nickname=user_to_open_room.nickname)
+            message="{nickname} 님이 대화방을 열었습니다.".format(
+                nickname=user_to_open_room.nickname)
         )
         data = push.as_dict()
         message_service.push(data, user_to.device_token, priority="high")
