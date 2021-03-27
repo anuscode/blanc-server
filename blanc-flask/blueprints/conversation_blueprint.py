@@ -12,7 +12,8 @@ from shared.json_encoder import encode
 
 conversations_blueprint = Blueprint('conversations_blueprint', __name__)
 
-BEGIN_CONVERSATION_MESSAGE = "대화가 시작 되었습니다. 즐거운 대화 나누세요."
+BEGIN_CONVERSATION_MESSAGE = "대화가 시작 되었습니다. 🥳🎉😀😂👌❤️😍"
+END_CONVERSATION_MESSAGE = "상대방이 대화를 종료 하였습니다."
 
 
 @conversations_blueprint.route('/conversations', methods=['POST'])
@@ -208,7 +209,7 @@ def route_leave_conversation(conversation_id: str, user_id: str):
             conversation_id=str(conversation.id),
             message_id=str(embedded_message.id),
             category="SYSTEM",
-            message=leave_message
+            message=END_CONVERSATION_MESSAGE
         )
         message_service.push(message_data, participant.device_token, priority="high")
 
