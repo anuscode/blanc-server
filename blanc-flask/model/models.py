@@ -1113,8 +1113,9 @@ class Report(db.Document):
         'auto_create_index': AUTO_CREATE_INDEX,
         'indexes': []
     }
-    reporter = db.ReferenceField(User, reverse_delete_rule=db.CASCADE, unique=True)
-    reportee = db.ReferenceField(User, reverse_delete_rule=db.CASCADE, unique=True)
+    reporter = db.ReferenceField(User, reverse_delete_rule=db.CASCADE)
+    reportee = db.ReferenceField(User, reverse_delete_rule=db.CASCADE)
+    post = db.ReferenceField(Post, reverse_delete_rule=db.CASCADE)
     description = db.StringField()
     reported_at = db.LongField(required=True)
     is_resolved = db.BooleanField(default=False)
