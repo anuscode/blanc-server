@@ -637,6 +637,15 @@ def route_withdraw_user(user_id: str):
     return Response("", mimetype="application/json")
 
 
+@users_blueprint.route("/users/<user_id>/device_token", methods=["DELETE"])
+@id_token_required
+def route_delete_user_device_token(user_id: str):
+    user = User.objects.get_or_404(id=user_id)
+    user.identify(request)
+    user.update(device_token=None)
+    return Response("", mimetype="application/json")
+
+
 def compare_user_images_and_temps(images, images_temp):
     images_set = set([image.url for image in images])
     images_temp_set = set([image.url for image in images_temp])
