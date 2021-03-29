@@ -571,7 +571,7 @@ def route_update_push_setting(user_id: str):
 
     params: dict = request.get_json()
 
-    setting: Setting = Setting.objects(owner=user).first() or Setting(owner=user)
+    setting = user.get_setting()
     setting.push.set(params)
     setting.save()
 

@@ -108,7 +108,12 @@ class User(db.Document):
 
     available = db.BooleanField(default=False)
     status = db.StringField(choices=[
-        Status.OPENED, Status.PENDING, Status.APPROVED, Status.REJECTED, Status.BLOCKED, Status.UNREGISTERED
+        Status.OPENED,
+        Status.PENDING,
+        Status.APPROVED,
+        Status.REJECTED,
+        Status.BLOCKED,
+        Status.UNREGISTERED
     ])
     star_rating_avg = db.FloatField(default=0)
 
@@ -542,6 +547,14 @@ class User(db.Document):
         # Contact.objects(owner=user).delete()
         # Alarm.objects(owner=user).delete()
 
+    def get_setting(self):
+        setting = Setting.objects(owner=self).first()
+        if not setting:
+            setting = Setting(owner=self)
+            setting.save()
+            setting.reload()
+        return setting
+
 
 class Unregister(db.Document):
     meta = {
@@ -860,9 +873,9 @@ class _Event(object):
     POKE = "POKE"
     REQUEST = "REQUEST"
     COMMENT = "COMMENT"
-    FAVORITE = "FAVORITE"
+    POST_FAVORITE = "POST_FAVORITE"
     MATCHED = "MATCHED"
-    THUMB_UP = "THUMB_UP"
+    COMMENT_THUMB_UP = "COMMENT_THUMB_UP"
     CONVERSATION_OPEN = "CONVERSATION_OPEN"
     CONVERSATION_LEAVE = "CONVERSATION_LEAVE"
     LOOK_UP = "LOOK_UP"
@@ -885,9 +898,9 @@ class AlarmRecord(db.EmbeddedDocument):
         _Event.POKE,
         _Event.REQUEST,
         _Event.COMMENT,
-        _Event.FAVORITE,
+        _Event.POST_FAVORITE,
         _Event.MATCHED,
-        _Event.THUMB_UP,
+        _Event.COMMENT_THUMB_UP,
         _Event.CONVERSATION_OPEN,
         _Event.CONVERSATION_LEAVE,
         _Event.LOOK_UP,
@@ -1084,9 +1097,10 @@ class Setting(db.Document):
         request = db.BooleanField(default=True)
         comment = db.BooleanField(default=True)
         high_rate = db.BooleanField(default=True)
-        match = db.BooleanField(default=True)
-        favorite_comment = db.BooleanField(default=True)
-        conversation = db.BooleanField(default=True)
+        matched = db.BooleanField(default=True)
+        post_favorite = db.BooleanField(default=True)
+        comment_thumb_up = db.BooleanField(default=True)
+        conversation_open = db.BooleanField(default=True)
         lookup = db.BooleanField(default=True)
 
         def set(self, push: dict):
@@ -1094,9 +1108,10 @@ class Setting(db.Document):
             self.request = push.get("request", False)
             self.comment = push.get("comment", False)
             self.high_rate = push.get("high_rate", False)
-            self.match = push.get("match", False)
-            self.favorite_comment = push.get("favorite_comment", False)
-            self.conversation = push.get("conversation", False)
+            self.matched = push.get("matched", False)
+            self.post_favorite = push.get("post_favorite", False)
+            self.comment_thumb_up = push.get("comment_thumb_up", False)
+            self.conversation_open = push.get("conversation_open", False)
             self.lookup = push.get("lookup", False)
 
     owner = db.ReferenceField(User, required=True, reverse_delete_rule=db.CASCADE, unique=True)

@@ -116,7 +116,7 @@ def route_create_favorite(post_id: str):
     alarm = Alarm.create_alarm(
         user_from=user_from,
         user_to=user_to,
-        event=Alarm.Event.FAVORITE,
+        event=Alarm.Event.POST_FAVORITE,
         post=post,
         message="{nickname} 님이 당신의 게시물을 좋아합니다.".format(nickname=user_from.nickname)
     )
@@ -209,7 +209,7 @@ def route_create_thumb_up(post_id, comment_id):
         alarm = Alarm.create_alarm(
             user_from=user_from,
             user_to=user_to,
-            event=Alarm.Event.THUMB_UP,
+            event=Alarm.Event.COMMENT_THUMB_UP,
             post=post,
             comment=comment,
             message="{nickname} 님이 당신의 댓글을 좋아합니다.".format(nickname=user_from.nickname))
