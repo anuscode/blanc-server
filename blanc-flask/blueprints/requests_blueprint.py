@@ -94,7 +94,7 @@ def route_create_request(user_id: str, r_type: int):
         message="{nickname} 님이 당신에게 친구 신청을 보냈습니다.".format(nickname=user_from.nickname))
     alarm_record = alarm.records[-1]
     data = alarm_record.as_dict()
-    message_service.push(data, user_to.device_token)
+    message_service.push(data, user_to)
 
     response = encode(Request.get(id=_request.id))
     return Response(response, mimetype="application/json")
@@ -144,7 +144,7 @@ def route_update_response_of_request(request_id: str, result: int):
             message="{nickname} 님과 연결 되었습니다.".format(nickname=_request.user_to.nickname))
         alarm_record = alarm.records[-1]
         data = alarm_record.as_dict()
-        message_service.push(data, user_alarm_to.device_token)
+        message_service.push(data, user_alarm_to)
 
     response = encode(Request.get(id=_request.id))
     return Response(response, mimetype="application/json")

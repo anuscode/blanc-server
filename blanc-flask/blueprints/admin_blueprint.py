@@ -135,7 +135,7 @@ def route_approve_users(user_id: str):
     user.available = True
     user.save()
 
-    message_service.push(dict(event=Alarm.Event.APPROVED), user.device_token)
+    message_service.push(dict(event=Alarm.Event.APPROVED), user)
 
     return Response("", mimetype="application/json")
 
@@ -155,7 +155,7 @@ def route_reject_users(user_id: str):
     user.available = False
     user.save()
 
-    message_service.push(dict(event=Alarm.Event.REJECTED), user.device_token)
+    message_service.push(dict(event=Alarm.Event.REJECTED), user)
 
     return Response("", mimetype="application/json")
 
@@ -175,6 +175,6 @@ def route_block_users(user_id: str):
     user.available = False
     user.save()
 
-    message_service.push(dict(event=Alarm.Event.BLOCKED), user.device_token)
+    message_service.push(dict(event=Alarm.Event.BLOCKED), user)
 
     return Response("", mimetype="application/json")

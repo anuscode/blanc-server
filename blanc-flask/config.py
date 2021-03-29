@@ -58,6 +58,9 @@ class QaConfig(Config):
 
 
 class DevConfig(Config):
+    MONGODB_SETTINGS = {
+        'host': 'mongodb://34.64.71.129:7361/blanc-prod'  # internal
+    }
     DEBUG = True
     TESTING = True
     TESTMODE_YN = "N"
@@ -67,7 +70,7 @@ class RemoteProdConfig(Config):
     DEBUG = True
     TESTING = True
     MONGODB_SETTINGS = {
-        'host': 'mongodb://34.64.134.230:7361/pingme-test'  # internal
+        'host': 'mongodb://34.64.71.129:7361/blanc-prod'  # internal
     }
     TESTMODE_YN = "N"
 

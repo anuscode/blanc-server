@@ -105,7 +105,7 @@ def route_create_message(conversation_id: str, message: str):
                 message=str(embedded_message.message),
                 category="MESSAGE",
             ),
-            user_to.device_token,
+            user_to,
             priority="high"
         )
 
@@ -157,7 +157,7 @@ def route_update_conversation_available(conversation_id: str, available: bool):
                 nickname=user_to_open_room.nickname)
         )
         data = push.as_dict()
-        message_service.push(data, user_to.device_token, priority="high")
+        message_service.push(data, user_to, priority="high")
 
     # push system message as conversation message
     for participant in conversation.participants:
@@ -211,7 +211,7 @@ def route_leave_conversation(conversation_id: str, user_id: str):
             category="SYSTEM",
             message=END_CONVERSATION_MESSAGE
         )
-        message_service.push(message_data, participant.device_token, priority="high")
+        message_service.push(message_data, participant, priority="high")
 
         leave_data = AlarmRecord(
             event=Alarm.Event.CONVERSATION_LEAVE,
@@ -221,7 +221,7 @@ def route_leave_conversation(conversation_id: str, user_id: str):
             message=leave_message
         )
         leave_data = leave_data.as_dict()
-        message_service.push(leave_data, participant.device_token, priority="high")
+        message_service.push(leave_data, participant, priority="high")
 
     return Response("", mimetype="application/json")
 

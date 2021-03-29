@@ -1100,6 +1100,7 @@ class Setting(db.Document):
         matched = db.BooleanField(default=True)
         post_favorite = db.BooleanField(default=True)
         comment_thumb_up = db.BooleanField(default=True)
+        conversation = db.BooleanField(default=True)
         conversation_open = db.BooleanField(default=True)
         lookup = db.BooleanField(default=True)
 
@@ -1113,6 +1114,7 @@ class Setting(db.Document):
             self.comment_thumb_up = push.get("comment_thumb_up", False)
             self.conversation_open = push.get("conversation_open", False)
             self.lookup = push.get("lookup", False)
+            self.conversation = push.get("conversation", False)
 
     owner = db.ReferenceField(User, required=True, reverse_delete_rule=db.CASCADE, unique=True)
     push = db.EmbeddedDocumentField(Push, default=Push())

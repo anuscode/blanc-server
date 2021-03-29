@@ -305,7 +305,7 @@ def route_update_user_status_to_approved(user_id: str):
     user.save()
 
     data = dict(event=Alarm.Event.APPROVED)
-    message_service.push(data, user.device_token)
+    message_service.push(data, user)
 
     return Response("", mimetype="application/json")
 
@@ -460,7 +460,7 @@ def route_update_star_rating(user_id: str, score: int):
                 message="{nickname} 님이 당신을 높게 평가 하였습니다.".format(nickname=user_from.nickname))
             alarm_record = alarm.records[-1]
             data = alarm_record.as_dict()
-            message_service.push(data, user_to.device_token)
+            message_service.push(data, user_to)
 
         star_ratings = StarRating.objects(user_to=user_to).all()
 
@@ -524,7 +524,7 @@ def route_push_look_up(user_id: str):
         image_url=user_from.get_first_image(),
         message="{nickname} 님이 당신을 조회 중입니다.".format(nickname=user_from.nickname),
         created_at=str(pendulum.now().int_timestamp)
-    ), user_to.device_token)
+    ), user_to)
 
     return Response("", mimetype="application/json")
 
@@ -543,7 +543,7 @@ def route_push_poke(user_id):
     )
     alarm_record = alarm.records[-1]
     data: dict = alarm_record.as_dict()
-    message_service.push(data, user_to.device_token)
+    message_service.push(data, user_to)
 
     return Response("", mimetype="application/json")
 

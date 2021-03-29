@@ -123,7 +123,7 @@ def route_create_favorite(post_id: str):
 
     alarm_record: AlarmRecord = alarm.records[-1]
     data: dict = alarm_record.as_dict()
-    message_service.push(data, user_to.device_token)
+    message_service.push(data, user_to)
 
     return Response("", mimetype="application/json")
 
@@ -175,7 +175,7 @@ def route_create_comment(post_id: str):
 
     alarm_record = alarm.records[-1]
     data = alarm_record.as_dict()
-    message_service.push(data, post.author.device_token)
+    message_service.push(data, post.author)
 
     comment = comment_to_create.to_mongo()
     comment["commenter"] = User.get(id=user.id).to_mongo()
@@ -215,7 +215,7 @@ def route_create_thumb_up(post_id, comment_id):
             message="{nickname} 님이 당신의 댓글을 좋아합니다.".format(nickname=user_from.nickname))
         alarm_record = alarm.records[-1]
         data = alarm_record.as_dict()
-        message_service.push(data, user_to.device_token)
+        message_service.push(data, user_to)
 
     return Response("", mimetype="application/json")
 
