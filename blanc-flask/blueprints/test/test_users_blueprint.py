@@ -807,5 +807,5 @@ class UsersBlueprintTestCase(unittest.TestCase):
         self.assertEqual(push_setting.conversation, False)
         self.assertEqual(push_setting.lookup, True)
 
-        if __name__ == "__main__":
-            unittest.main()
+if __name__ == "__main__":
+    unittest.main()
